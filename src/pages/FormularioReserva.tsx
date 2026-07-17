@@ -38,6 +38,23 @@ const initialPassenger: PassengerFormData = {
   formaPagamento: 'pix',
 }
 
+const formatCPF = (value: string) => {
+  let v = value.replace(/\D/g, '')
+  if (v.length > 11) v = v.slice(0, 11)
+  return v
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+}
+
+const formatWhatsApp = (value: string) => {
+  let v = value.replace(/\D/g, '')
+  if (v.length > 11) v = v.slice(0, 11)
+  v = v.replace(/^(\d{2})(\d)/g, '($1) $2')
+  v = v.replace(/(\d)(\d{4})$/, '$1-$2')
+  return v
+}
+
 export function FormularioReserva({ passeioId }: { passeioId: string }) {
   // Estados do Passeio
   const [passeio, setPasseio] = useState<Passeio | null>(null)
@@ -101,7 +118,11 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
   }
 
   const handleChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
+    let { name, value } = e.target
+
+    if (name === 'cpf') value = formatCPF(value)
+    if (name === 'whatsapp') value = formatWhatsApp(value)
+
     setPassageiros((prev) => {
       const newArr = [...prev]
       newArr[index] = { ...newArr[index], [name]: value }
@@ -309,6 +330,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                           name="cpf"
                           value={pax.cpf}
                           onChange={(e) => handleChange(idx, e)}
+                          inputMode="numeric"
                           placeholder="000.000.000-00"
                           className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
                         />
@@ -317,10 +339,11 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                         <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/70">WhatsApp</label>
                         <input
                           required
-                          type="tel"
+                          type="text"
                           name="whatsapp"
                           value={pax.whatsapp}
                           onChange={(e) => handleChange(idx, e)}
+                          inputMode="numeric"
                           placeholder="(00) 90000-0000"
                           className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
                         />
