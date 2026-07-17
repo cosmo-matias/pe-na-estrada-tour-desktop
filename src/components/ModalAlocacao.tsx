@@ -227,27 +227,30 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                       </p>
                     </div>
                   ) : (
-                    passageiros.map((pax, idx) => (
-                      <div
-                        key={pax.id}
-                        className="flex items-center gap-3 p-3 bg-white rounded-xl border border-brand-secondary/20 hover:border-brand-primary/30 transition-colors"
-                      >
-                        {/* Avatar */}
-                        <div className="w-8 h-8 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-sm flex-shrink-0">
-                          {idx + 1}
+                    [...passageiros]
+                      .sort((a, b) => Number(a.assentoNumero ?? 0) - Number(b.assentoNumero ?? 0))
+                      .map((pax, idx) => (
+                        <div
+                          key={pax.id}
+                          className="flex items-center gap-3 p-3 bg-white rounded-xl border border-brand-secondary/20 hover:border-brand-primary/30 transition-colors"
+                        >
+                          {/* Badge de Poltrona em destaque */}
+                          <div className="w-9 h-9 rounded-full bg-brand-primary flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm shadow-brand-primary/40">
+                            {pax.assentoNumero ?? '—'}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-brand-dark font-semibold text-xs truncate">{pax.nome}</p>
+                            <p className="text-brand-dark/50 text-xs">{pax.telefone}</p>
+                          </div>
+
+                          {/* Posição ordinal */}
+                          <span className="flex-shrink-0 text-brand-dark/30 text-[10px] font-medium">
+                            #{idx + 1}
+                          </span>
                         </div>
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-brand-dark font-semibold text-xs truncate">{pax.nome}</p>
-                          <p className="text-brand-dark/50 text-xs">{pax.telefone}</p>
-                        </div>
-                        {/* Assento */}
-                        <div className="flex-shrink-0 flex items-center gap-1 bg-green-50 border border-green-200 rounded-lg px-2 py-1">
-                          <span className="text-xs">💺</span>
-                          <span className="text-green-700 text-xs font-bold">{pax.assentoNumero}</span>
-                        </div>
-                      </div>
-                    ))
+                      ))
                   )}
                 </div>
               )}
