@@ -157,8 +157,9 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
 
     try {
       // Salva todos os passageiros em lote no Firestore usando Promise.all
-      const promises = passageiros.map((pax) => {
-        return addDoc(collection(db, 'passageiros'), {
+      const promises = passageiros.map(async (pax) => {
+        // Salva o passageiro
+        const paxRef = await addDoc(collection(db, 'passageiros'), {
           passeioId,
           nomeCompleto: pax.nomeCompleto,
           dataNascimento: pax.dataNascimento,
@@ -170,6 +171,20 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
           formaPagamento: pax.formaPagamento,
           statusAlocacao: 'nao_alocado',
           numeroPoltrona: null,
+          historicoPagamentos: [],
+        })
+
+        // Cria a transação (Entrada Pendente)
+        await addDoc(collection(db, 'transacoes'), {
+          tipo: 'entrada',
+          status: 'pendente',
+          valorTotal: passeio.valor,
+          valorPago: 0,
+          descricao: `Reserva - ${pax.nomeCompleto} (${passeio.destino})`,
+          data: new Date().toISOString(),
+          dataVencimento: new Date().toISOString().split('T')[0],
+          passageiroId: paxRef.id,
+          passeioId,
         })
       })
 

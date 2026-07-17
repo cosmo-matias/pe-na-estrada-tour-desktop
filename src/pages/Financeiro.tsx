@@ -1,56 +1,65 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { collection, onSnapshot } from 'firebase/firestore'
+import { db } from '../config/firebase'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { Transacao } from '../types'
 
-const mockTransacoes: Transacao[] = [
-  { id: 't1', tipo: 'entrada', descricao: 'Venda Passeio Pipa', valor: 1500, data: '2023-10-01', passeioId: 'p1' },
-  { id: 't2', tipo: 'saida', descricao: 'Combustível Van', valor: 250, data: '2023-10-02' },
-  { id: 't3', tipo: 'entrada', descricao: 'Venda Passeio Maragogi', valor: 3000, data: '2023-10-05', passeioId: 'p2' },
-  { id: 't4', tipo: 'saida', descricao: 'Alimentação Motorista', valor: 80, data: '2023-10-05' },
-  { id: 't5', tipo: 'entrada', descricao: 'Sinal Passeio Natal', valor: 500, data: '2023-10-10' },
-  { id: 't6', tipo: 'saida', descricao: 'Manutenção Pneu', valor: 400, data: '2023-10-12' },
-]
-
 export function Financeiro() {
+  const [transacoes, setTransacoes] = useState<Transacao[]>([])
   const [dataInicial, setDataInicial] = useState('')
   const [dataFinal, setDataFinal] = useState('')
 
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'transacoes'), (snapshot) => {
+      const ts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transacao))
+      setTransacoes(ts)
+    })
+    return () => unsub()
+  }, [])
+
   // Filtro
   const transacoesFiltradas = useMemo(() => {
-    return mockTransacoes.filter((t) => {
+    return transacoes.filter((t) => {
       let passa = true
       if (dataInicial && t.data < dataInicial) passa = false
       if (dataFinal && t.data > dataFinal) passa = false
       return passa
     }).sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()) // Mais recentes primeiro
-  }, [dataInicial, dataFinal])
+  }, [dataInicial, dataFinal, transacoes])
 
   // Consolidados
-  const { totalEntradas, totalSaidas, saldo } = useMemo(() => {
-    let entradas = 0
+  const { totalRecebido, aReceber, totalSaidas } = useMemo(() => {
+    let recebido = 0
+    let pendente = 0
     let saidas = 0
     transacoesFiltradas.forEach(t => {
-      if (t.tipo === 'entrada') entradas += t.valor
-      else saidas += t.valor
+      if (t.tipo === 'entrada') {
+        recebido += t.valorPago || 0
+        pendente += Math.max(0, (t.valorTotal || 0) - (t.valorPago || 0))
+      } else {
+        // Para saídas, consideramos que valorTotal ou valorPago é a saída. Vamos usar valorTotal por padrão se valorPago não for definido, ou assumir valorPago se já pago
+        saidas += t.valorTotal || 0 
+      }
     })
     return {
-      totalEntradas: entradas,
-      totalSaidas: saidas,
-      saldo: entradas - saidas
+      totalRecebido: recebido,
+      aReceber: pendente,
+      totalSaidas: saidas
     }
   }, [transacoesFiltradas])
 
   // Dados Gráfico
   const chartData = useMemo(() => {
-    // Agrupar por data
     const map = new Map<string, { data: string; entradas: number; saidas: number }>()
     transacoesFiltradas.forEach(t => {
-      const existing = map.get(t.data) || { data: t.data, entradas: 0, saidas: 0 }
-      if (t.tipo === 'entrada') existing.entradas += t.valor
-      else existing.saidas += t.valor
-      map.set(t.data, existing)
+      // Agrupa pelo dia ISO
+      const d = t.data.split('T')[0]
+      const existing = map.get(d) || { data: d, entradas: 0, saidas: 0 }
+      if (t.tipo === 'entrada') existing.entradas += t.valorPago || 0
+      else existing.saidas += t.valorTotal || 0
+      map.set(d, existing)
     })
     return Array.from(map.values()).sort((a, b) => a.data.localeCompare(b.data))
   }, [transacoesFiltradas])
@@ -71,12 +80,14 @@ export function Financeiro() {
     doc.text(periodoInfo, 14, 38)
 
     // Tabela
-    const tableColumn = ["Data", "Descrição", "Tipo", "Valor"]
+    const tableColumn = ["Data", "Descrição", "Tipo", "Status", "Total", "Pago/Saída"]
     const tableRows = transacoesFiltradas.map(t => [
       new Date(t.data).toLocaleDateString('pt-BR'),
       t.descricao,
       t.tipo === 'entrada' ? 'Entrada' : 'Saída',
-      `R$ ${t.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+      t.status.toUpperCase(),
+      `R$ ${t.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      `R$ ${(t.tipo === 'entrada' ? t.valorPago : t.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
     ])
 
     autoTable(doc, {
@@ -84,11 +95,9 @@ export function Financeiro() {
       head: [tableColumn],
       body: tableRows,
       theme: 'striped',
-      headStyles: { fillColor: [4, 59, 92] }, // Cor brand-dark (estimada)
+      headStyles: { fillColor: [4, 59, 92] },
       foot: [
-        ['', '', 'Entradas:', `R$ ${totalEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
-        ['', '', 'Saídas:', `R$ ${totalSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
-        ['', '', 'Saldo:', `R$ ${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`]
+        ['', '', '', 'Totais:', `Rec: R$ ${totalRecebido.toLocaleString('pt-BR')}`, `Saídas: R$ ${totalSaidas.toLocaleString('pt-BR')}`],
       ],
       footStyles: { fillColor: [240, 240, 240], textColor: [0,0,0], fontStyle: 'bold' }
     })
@@ -117,22 +126,22 @@ export function Financeiro() {
       {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-emerald-500 rounded-2xl p-6 text-white shadow-lg shadow-emerald-500/20">
-          <p className="text-emerald-100 text-sm font-semibold mb-1 uppercase tracking-wider">Entradas</p>
-          <p className="text-3xl font-bold">{formatarValor(totalEntradas)}</p>
+          <p className="text-emerald-100 text-sm font-semibold mb-1 uppercase tracking-wider">Total Recebido</p>
+          <p className="text-3xl font-bold">{formatarValor(totalRecebido)}</p>
+        </div>
+        <div className="bg-brand-secondary rounded-2xl p-6 text-white shadow-lg shadow-brand-secondary/20">
+          <p className="text-white/80 text-sm font-semibold mb-1 uppercase tracking-wider">A Receber</p>
+          <p className="text-3xl font-bold">{formatarValor(aReceber)}</p>
         </div>
         <div className="bg-brand-alert rounded-2xl p-6 text-white shadow-lg shadow-brand-alert/20">
-          <p className="text-red-200 text-sm font-semibold mb-1 uppercase tracking-wider">Saídas</p>
+          <p className="text-red-200 text-sm font-semibold mb-1 uppercase tracking-wider">Saídas Totais</p>
           <p className="text-3xl font-bold">{formatarValor(totalSaidas)}</p>
-        </div>
-        <div className={`rounded-2xl p-6 text-white shadow-lg ${saldo >= 0 ? 'bg-brand-primary shadow-brand-primary/20' : 'bg-orange-500 shadow-orange-500/20'}`}>
-          <p className="text-white/80 text-sm font-semibold mb-1 uppercase tracking-wider">Saldo Líquido</p>
-          <p className="text-3xl font-bold">{formatarValor(saldo)}</p>
         </div>
       </div>
 
       {/* Gráfico */}
       <div className="bg-white p-6 rounded-2xl border border-brand-secondary/20 shadow-sm">
-        <h3 className="text-lg font-bold text-brand-dark mb-6">Desempenho (Entradas vs Saídas)</h3>
+        <h3 className="text-lg font-bold text-brand-dark mb-6">Desempenho (Recebido vs Saídas)</h3>
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -150,11 +159,14 @@ export function Financeiro() {
               <YAxis stroke="#64748b" fontSize={12} tickFormatter={(val) => `R$ ${val}`} />
               <Tooltip 
                 formatter={(value: number) => [formatarValor(value), '']}
-                labelFormatter={(label) => new Date(label).toLocaleDateString('pt-BR')}
+                labelFormatter={(label) => {
+                  const d = new Date(label)
+                  return isNaN(d.getTime()) ? label : d.toLocaleDateString('pt-BR')
+                }}
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
               />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
-              <Bar dataKey="entradas" name="Entradas" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50} />
+              <Bar dataKey="entradas" name="Recebido" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50} />
               <Bar dataKey="saidas" name="Saídas" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={50} />
             </BarChart>
           </ResponsiveContainer>
@@ -196,13 +208,15 @@ export function Financeiro() {
                 <th className="p-4 font-bold">Data</th>
                 <th className="p-4 font-bold">Descrição</th>
                 <th className="p-4 font-bold">Tipo</th>
-                <th className="p-4 font-bold text-right">Valor</th>
+                <th className="p-4 font-bold">Status</th>
+                <th className="p-4 font-bold text-right">Valor Total</th>
+                <th className="p-4 font-bold text-right">Valor Pago/Saída</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-secondary/10">
               {transacoesFiltradas.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-brand-dark/60">
+                  <td colSpan={6} className="p-8 text-center text-brand-dark/60">
                     Nenhuma transação encontrada no período.
                   </td>
                 </tr>
@@ -220,8 +234,20 @@ export function Financeiro() {
                         {t.tipo === 'entrada' ? 'ENTRADA' : 'SAÍDA'}
                       </span>
                     </td>
+                    <td className="p-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${
+                        t.status === 'efetivada' ? 'bg-emerald-100 text-emerald-700' : 
+                        t.status === 'parcial' ? 'bg-yellow-100 text-yellow-700' : 
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {t.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className={`p-4 text-right font-bold`}>
+                      {formatarValor(t.valorTotal)}
+                    </td>
                     <td className={`p-4 text-right font-bold ${t.tipo === 'entrada' ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {t.tipo === 'entrada' ? '+' : '-'} {formatarValor(t.valor)}
+                      {t.tipo === 'entrada' ? '+' : '-'} {formatarValor(t.tipo === 'entrada' ? t.valorPago : t.valorTotal)}
                     </td>
                   </tr>
                 ))

@@ -59,14 +59,28 @@ export interface Passageiro {
   formaPagamento: 'dinheiro' | 'pix' | 'cartao_credito'
   statusAlocacao: 'alocado' | 'nao_alocado'
   numeroPoltrona: number | null
+  desconto?: {
+    tipo: 'porcentagem' | 'fixo'
+    valor: number
+  }
+  historicoPagamentos?: Array<{
+    id: string
+    data: string
+    valor: number
+    metodo: string
+  }>
 }
 
 // ── Financeiro ─────────────────────────────────────────────────────────
 export interface Transacao {
   id: string
   tipo: 'entrada' | 'saida'
+  status: 'pendente' | 'parcial' | 'efetivada'
+  valorTotal: number
+  valorPago: number
   descricao: string
-  valor: number
   data: string
+  dataVencimento?: string
+  passageiroId?: string
   passeioId?: string
 }
