@@ -1,7 +1,11 @@
 import { useState } from 'react'
+import { Passeios } from './pages/Passeios'
 
-type MenuItem = {
-  id: string
+// ── Tipos ─────────────────────────────────────────────────────────────
+type MenuId = 'home' | 'passeios' | 'passageiros' | 'financeiro'
+
+interface MenuItem {
+  id: MenuId
   label: string
   icon: string
 }
@@ -13,16 +17,17 @@ const menuItems: MenuItem[] = [
   { id: 'financeiro', label: 'Financeiro', icon: '💰' },
 ]
 
+// ── Componente Principal ──────────────────────────────────────────────
 function App() {
-  const [activeMenu, setActiveMenu] = useState('home')
+  const [activeMenu, setActiveMenu] = useState<MenuId>('home')
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-brand-light">
 
-      {/* ── SIDEBAR ─────────────────────────────────────── */}
+      {/* ── SIDEBAR ──────────────────────────────────────────────── */}
       <aside className="flex flex-col w-64 min-w-64 h-full bg-brand-dark shadow-2xl">
 
-        {/* Logo / Cabeçalho */}
+        {/* Logo */}
         <div className="flex flex-col items-center justify-center px-6 py-8 border-b border-white/10">
           <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-primary shadow-lg mb-3">
             <span className="text-2xl">🚌</span>
@@ -35,13 +40,14 @@ function App() {
           </p>
         </div>
 
-        {/* Menu de Navegação */}
+        {/* Navegação */}
         <nav className="flex-1 px-4 py-6 space-y-1">
           {menuItems.map((item) => {
             const isActive = activeMenu === item.id
             return (
               <button
                 key={item.id}
+                id={`nav-${item.id}`}
                 onClick={() => setActiveMenu(item.id)}
                 className={`
                   w-full flex items-center gap-3 px-4 py-3 rounded-xl
@@ -62,7 +68,7 @@ function App() {
           })}
         </nav>
 
-        {/* Rodapé da Sidebar */}
+        {/* Rodapé */}
         <div className="px-6 py-5 border-t border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-brand-accent flex items-center justify-center text-brand-dark font-bold text-sm">
@@ -76,11 +82,11 @@ function App() {
         </div>
       </aside>
 
-      {/* ── ÁREA PRINCIPAL ──────────────────────────────── */}
-      <main className="flex flex-col flex-1 h-full overflow-auto">
+      {/* ── ÁREA PRINCIPAL ───────────────────────────────────────── */}
+      <main className="flex flex-col flex-1 h-full overflow-hidden">
 
         {/* Topbar */}
-        <header className="flex items-center justify-between px-8 py-5 bg-white/80 backdrop-blur-sm border-b border-brand-secondary/20 shadow-sm sticky top-0 z-10">
+        <header className="flex items-center justify-between px-8 py-4 bg-white/80 backdrop-blur-sm border-b border-brand-secondary/20 shadow-sm flex-shrink-0">
           <div>
             <h2 className="text-brand-dark font-bold text-xl capitalize">
               {menuItems.find((m) => m.id === activeMenu)?.label}
@@ -91,30 +97,35 @@ function App() {
           </div>
           <div className="flex items-center gap-3">
             <div className="px-3 py-1.5 rounded-full bg-brand-light border border-brand-secondary/40 text-brand-primary text-xs font-medium">
-              {new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {new Date().toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
             </div>
           </div>
         </header>
 
-        {/* Conteúdo Dinâmico */}
-        <div className="flex-1 p-8">
-          {activeMenu === 'home' && <HomePlaceholder />}
-          {activeMenu === 'passeios' && <SectionPlaceholder title="Passeios" icon="🚌" color="brand-primary" />}
-          {activeMenu === 'passageiros' && <SectionPlaceholder title="Passageiros" icon="👥" color="brand-secondary" />}
-          {activeMenu === 'financeiro' && <SectionPlaceholder title="Financeiro" icon="💰" color="brand-accent" />}
+        {/* Conteúdo */}
+        <div className="flex-1 overflow-auto p-8">
+          {activeMenu === 'home' && <HomeDashboard />}
+          {activeMenu === 'passeios' && <Passeios />}
+          {activeMenu === 'passageiros' && <PlaceholderSecao titulo="Passageiros" icone="👥" />}
+          {activeMenu === 'financeiro' && <PlaceholderSecao titulo="Financeiro" icone="💰" />}
         </div>
       </main>
     </div>
   )
 }
 
-/* ── Placeholder da Home ──────────────────────────────── */
-function HomePlaceholder() {
+// ── Home Dashboard ────────────────────────────────────────────────────
+function HomeDashboard() {
   const cards = [
-    { label: 'Passeios Hoje', value: '4', icon: '🚌', color: 'bg-brand-primary' },
-    { label: 'Passageiros', value: '128', icon: '👥', color: 'bg-brand-secondary' },
-    { label: 'Receita do Mês', value: 'R$ 18.400', icon: '💰', color: 'bg-brand-accent' },
-    { label: 'Alertas', value: '2', icon: '⚠️', color: 'bg-brand-alert' },
+    { label: 'Passeios Hoje', value: '4', icon: '🚌', cor: 'bg-brand-primary' },
+    { label: 'Passageiros', value: '128', icon: '👥', cor: 'bg-emerald-500' },
+    { label: 'Receita do Mês', value: 'R$ 18.400', icon: '💰', cor: 'bg-brand-accent' },
+    { label: 'Alertas', value: '2', icon: '⚠️', cor: 'bg-brand-alert' },
   ]
 
   return (
@@ -126,7 +137,7 @@ function HomePlaceholder() {
             key={card.label}
             className="bg-white rounded-2xl p-5 shadow-sm border border-brand-secondary/20 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
           >
-            <div className={`inline-flex items-center justify-center w-11 h-11 rounded-xl ${card.color} bg-opacity-15 mb-4`}>
+            <div className={`inline-flex items-center justify-center w-11 h-11 rounded-xl ${card.cor} bg-opacity-15 mb-4`}>
               <span className="text-xl">{card.icon}</span>
             </div>
             <p className="text-brand-dark font-bold text-2xl">{card.value}</p>
@@ -135,11 +146,12 @@ function HomePlaceholder() {
         ))}
       </div>
 
-      {/* Área de Boas-Vindas */}
+      {/* Banner de Boas-Vindas */}
       <div className="bg-gradient-to-br from-brand-dark to-brand-primary rounded-2xl p-8 text-white shadow-xl">
         <h3 className="text-2xl font-bold mb-2">Bem-vindo ao Gerenciador 👋</h3>
         <p className="text-brand-light/80 text-sm leading-relaxed max-w-lg">
-          Gerencie passeios, passageiros e finanças da <strong>Pé Na Estrada Tour</strong> em um único lugar.
+          Gerencie passeios, passageiros e finanças da{' '}
+          <strong>Pé Na Estrada Tour</strong> em um único lugar.
           Use o menu lateral para navegar entre as seções.
         </p>
         <div className="mt-6 flex gap-3">
@@ -155,15 +167,13 @@ function HomePlaceholder() {
   )
 }
 
-/* ── Placeholder Genérico de Seção ───────────────────── */
-function SectionPlaceholder({ title, icon, color }: { title: string; icon: string; color: string }) {
+// ── Placeholder de Seção ──────────────────────────────────────────────
+function PlaceholderSecao({ titulo, icone }: { titulo: string; icone: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-80 bg-white rounded-2xl border border-brand-secondary/20 shadow-sm">
-      <span className="text-5xl mb-4">{icon}</span>
-      <h3 className="text-brand-dark font-bold text-xl mb-2">{title}</h3>
-      <p className={`text-${color} text-sm`}>
-        Esta seção está em desenvolvimento.
-      </p>
+      <span className="text-5xl mb-4">{icone}</span>
+      <h3 className="text-brand-dark font-bold text-xl mb-2">{titulo}</h3>
+      <p className="text-brand-primary text-sm">Esta seção está em desenvolvimento.</p>
     </div>
   )
 }
