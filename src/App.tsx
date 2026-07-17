@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Passeios } from './pages/Passeios'
 import { FormularioReserva } from './pages/FormularioReserva'
+import { Passageiros } from './pages/Passageiros'
 
 // ── Tipos ─────────────────────────────────────────────────────────────
 type MenuId = 'home' | 'passeios' | 'passageiros' | 'financeiro'
@@ -128,7 +129,7 @@ function App() {
         <div className="flex-1 overflow-auto p-8">
           {activeMenu === 'home' && <HomeDashboard />}
           {activeMenu === 'passeios' && <Passeios />}
-          {activeMenu === 'passageiros' && <PlaceholderSecao titulo="Passageiros" icone="👥" />}
+          {activeMenu === 'passageiros' && <Passageiros />}
           {activeMenu === 'financeiro' && <PlaceholderSecao titulo="Financeiro" icone="💰" />}
         </div>
       </main>

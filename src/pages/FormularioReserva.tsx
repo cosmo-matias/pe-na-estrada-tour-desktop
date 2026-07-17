@@ -84,6 +84,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
         
         if (docSnap && docSnap.exists()) {
           setPasseio({ id: docSnap.id, ...docSnap.data() } as Passeio)
+          setLoading(false)
           return
         }
       } catch (error) {
