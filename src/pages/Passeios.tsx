@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Passeio } from '../types'
 import { passeiosMock } from '../mocks/passeios'
 import { PasseioCard } from '../components/PasseioCard'
+import { ModalAlocacao } from '../components/ModalAlocacao'
 
 // ── Configuração das colunas do Kanban ───────────────────────────────
 type StatusKanban = Passeio['status']
@@ -50,13 +51,18 @@ const COLUNAS: KanbanColuna[] = [
 export function Passeios() {
   const [passeios, setPasseios] = useState<Passeio[]>(passeiosMock)
 
-  // ── Handlers (stubs — serão integrados ao Firestore) ──────────────
+  // ── Estado do Modal de Alocação ────────────────────────────────────
+  const [passeioModal, setPasseioModal] = useState<Passeio | null>(null)
+  const [modalAberto, setModalAberto] = useState(false)
+
+  // ── Handlers ──────────────────────────────────────────────────────
   const handleGerarLink = (id: string) => {
     alert(`🔗 Gerar link de inscrição para o passeio #${id}\n(Em breve: link compartilhável)`)
   }
 
-  const handleAlocar = (id: string) => {
-    alert(`➕ Alocar passageiro no passeio #${id}\n(Em breve: modal de alocação)`)
+  const handleAlocar = (passeio: Passeio) => {
+    setPasseioModal(passeio)
+    setModalAberto(true)
   }
 
   const handleEditar = (id: string) => {
@@ -95,6 +101,13 @@ export function Passeios() {
 
   return (
     <div className="flex flex-col h-full gap-6">
+
+      {/* ── Modal de Alocação ── */}
+      <ModalAlocacao
+        passeio={passeioModal}
+        aberto={modalAberto}
+        onFechar={() => setModalAberto(false)}
+      />
 
       {/* ── Cabeçalho do Módulo ── */}
       <div className="flex items-center justify-between">

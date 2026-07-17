@@ -3,7 +3,7 @@ import type { Passeio } from '../types'
 interface PasseioCardProps {
   passeio: Passeio
   onGerarLink?: (id: string) => void
-  onAlocar?: (id: string) => void
+  onAlocar?: (passeio: Passeio) => void
   onEditar?: (id: string) => void
   onCancelar?: (id: string) => void
   onExcluir?: (id: string) => void
@@ -128,7 +128,7 @@ export function PasseioCard({
           </button>
           <button
             id={`btn-alocar-${id}`}
-            onClick={() => onAlocar?.(id)}
+            onClick={() => onAlocar?.(passeio)}
             className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-brand-primary text-white text-xs font-semibold hover:bg-brand-primary/85 transition-colors shadow-sm shadow-brand-primary/30"
           >
             <span>➕</span> Alocar
