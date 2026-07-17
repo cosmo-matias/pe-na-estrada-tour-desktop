@@ -49,7 +49,12 @@ export interface Passageiro {
   cpf: string
   whatsapp: string
   contatoEmergencia: string
-  endereco: string
+  endereco: {
+    logradouro: string
+    bairro: string
+    cidade: string
+    estado: string
+  }
   pontoEmbarque: string
   formaPagamento: 'dinheiro' | 'pix' | 'cartao_credito'
   statusAlocacao: 'alocado' | 'nao_alocado'

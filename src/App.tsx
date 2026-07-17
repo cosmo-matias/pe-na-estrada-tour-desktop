@@ -27,7 +27,8 @@ function App() {
     // Roteamento simples baseado na URL
     const path = window.location.pathname
     if (path.startsWith('/reserva/')) {
-      const id = path.replace('/reserva/', '')
+      let id = path.replace('/reserva/', '')
+      id = id.replace(/['"%27]/g, '') // Remove aspas indesejadas se existirem na URL colada
       setReservaPasseioId(id)
     }
   }, [])
