@@ -60,3 +60,13 @@ export interface Passageiro {
   statusAlocacao: 'alocado' | 'nao_alocado'
   numeroPoltrona: number | null
 }
+
+// ── Financeiro ─────────────────────────────────────────────────────────
+export interface Transacao {
+  id: string
+  tipo: 'entrada' | 'saida'
+  descricao: string
+  valor: number
+  data: string
+  passeioId?: string
+}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Passeios } from './pages/Passeios'
 import { FormularioReserva } from './pages/FormularioReserva'
 import { Passageiros } from './pages/Passageiros'
+import { Financeiro } from './pages/Financeiro'
 
 // ── Tipos ─────────────────────────────────────────────────────────────
 type MenuId = 'home' | 'passeios' | 'passageiros' | 'financeiro'
@@ -130,7 +131,7 @@ function App() {
           {activeMenu === 'home' && <HomeDashboard />}
           {activeMenu === 'passeios' && <Passeios />}
           {activeMenu === 'passageiros' && <Passageiros />}
-          {activeMenu === 'financeiro' && <PlaceholderSecao titulo="Financeiro" icone="💰" />}
+          {activeMenu === 'financeiro' && <Financeiro />}
         </div>
       </main>
     </div>
