@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Home } from './pages/Home'
 import { Passeios } from './pages/Passeios'
 import { FormularioReserva } from './pages/FormularioReserva'
 import { Passageiros } from './pages/Passageiros'
@@ -128,71 +129,12 @@ function App() {
 
         {/* Conteúdo */}
         <div className="flex-1 overflow-auto p-8">
-          {activeMenu === 'home' && <HomeDashboard />}
+          {activeMenu === 'home' && <Home />}
           {activeMenu === 'passeios' && <Passeios />}
           {activeMenu === 'passageiros' && <Passageiros />}
           {activeMenu === 'financeiro' && <Financeiro />}
         </div>
       </main>
-    </div>
-  )
-}
-
-// ── Home Dashboard ────────────────────────────────────────────────────
-function HomeDashboard() {
-  const cards = [
-    { label: 'Passeios Hoje', value: '4', icon: '🚌', cor: 'bg-brand-primary' },
-    { label: 'Passageiros', value: '128', icon: '👥', cor: 'bg-emerald-500' },
-    { label: 'Receita do Mês', value: 'R$ 18.400', icon: '💰', cor: 'bg-brand-accent' },
-    { label: 'Alertas', value: '2', icon: '⚠️', cor: 'bg-brand-alert' },
-  ]
-
-  return (
-    <div className="space-y-8">
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-4 gap-5">
-        {cards.map((card) => (
-          <div
-            key={card.label}
-            className="bg-white rounded-2xl p-5 shadow-sm border border-brand-secondary/20 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-          >
-            <div className={`inline-flex items-center justify-center w-11 h-11 rounded-xl ${card.cor} bg-opacity-15 mb-4`}>
-              <span className="text-xl">{card.icon}</span>
-            </div>
-            <p className="text-brand-dark font-bold text-2xl">{card.value}</p>
-            <p className="text-brand-primary text-xs mt-1 font-medium">{card.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Banner de Boas-Vindas */}
-      <div className="bg-gradient-to-br from-brand-dark to-brand-primary rounded-2xl p-8 text-white shadow-xl">
-        <h3 className="text-2xl font-bold mb-2">Bem-vindo ao Gerenciador 👋</h3>
-        <p className="text-brand-light/80 text-sm leading-relaxed max-w-lg">
-          Gerencie passeios, passageiros e finanças da{' '}
-          <strong>Pé Na Estrada Tour</strong> em um único lugar.
-          Use o menu lateral para navegar entre as seções.
-        </p>
-        <div className="mt-6 flex gap-3">
-          <span className="px-4 py-2 bg-brand-accent text-brand-dark rounded-lg text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity">
-            Novo Passeio
-          </span>
-          <span className="px-4 py-2 bg-white/10 text-white rounded-lg text-sm font-medium cursor-pointer hover:bg-white/20 transition-colors">
-            Ver Relatórios
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Placeholder de Seção ──────────────────────────────────────────────
-function PlaceholderSecao({ titulo, icone }: { titulo: string; icone: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full min-h-80 bg-white rounded-2xl border border-brand-secondary/20 shadow-sm">
-      <span className="text-5xl mb-4">{icone}</span>
-      <h3 className="text-brand-dark font-bold text-xl mb-2">{titulo}</h3>
-      <p className="text-brand-primary text-sm">Esta seção está em desenvolvimento.</p>
     </div>
   )
 }
