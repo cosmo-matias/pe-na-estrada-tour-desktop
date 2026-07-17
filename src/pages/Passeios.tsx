@@ -57,7 +57,10 @@ export function Passeios() {
 
   // ── Handlers ──────────────────────────────────────────────────────
   const handleGerarLink = (id: string) => {
-    alert(`🔗 Gerar link de inscrição para o passeio #${id}\n(Em breve: link compartilhável)`)
+    const url = `http://localhost:5173/reserva/${id}`
+    navigator.clipboard.writeText(url)
+      .then(() => alert(`✅ Link copiado!\n${url}`))
+      .catch(() => alert('❌ Erro ao copiar link. Tente manualmente.'))
   }
 
   const handleAlocar = (passeio: Passeio) => {

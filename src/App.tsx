@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Passeios } from './pages/Passeios'
+import { FormularioReserva } from './pages/FormularioReserva'
 
 // ── Tipos ─────────────────────────────────────────────────────────────
 type MenuId = 'home' | 'passeios' | 'passageiros' | 'financeiro'
@@ -20,6 +21,21 @@ const menuItems: MenuItem[] = [
 // ── Componente Principal ──────────────────────────────────────────────
 function App() {
   const [activeMenu, setActiveMenu] = useState<MenuId>('home')
+  const [reservaPasseioId, setReservaPasseioId] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Roteamento simples baseado na URL
+    const path = window.location.pathname
+    if (path.startsWith('/reserva/')) {
+      const id = path.replace('/reserva/', '')
+      setReservaPasseioId(id)
+    }
+  }, [])
+
+  // Se estiver na rota pública de reserva, renderiza apenas o formulário
+  if (reservaPasseioId) {
+    return <FormularioReserva passeioId={reservaPasseioId} />
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-brand-light">

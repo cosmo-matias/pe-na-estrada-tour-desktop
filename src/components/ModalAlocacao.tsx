@@ -2,20 +2,15 @@ import { useState, useEffect } from 'react'
 import type { Passeio, Assento, Passageiro, TipoTransporte } from '../types'
 import { MapaAssentos, gerarAssentos } from './MapaAssentos'
 
-// ── Mock de passageiros alocados (será integrado ao Firestore) ────────
-const mockPassageiros: Record<string, Passageiro[]> = {
-  '1': [
-    { id: 'p1', nome: 'Ana Clara Souza', telefone: '(83) 99101-2233', assentoNumero: 3 },
-    { id: 'p2', nome: 'Carlos Mendes', telefone: '(83) 98877-5544', assentoNumero: 5 },
-    { id: 'p3', nome: 'Fernanda Lima', telefone: '(83) 99234-6677', assentoNumero: 8 },
-    { id: 'p4', nome: 'João Pedro Alves', telefone: '(83) 99321-8899', assentoNumero: 12 },
-    { id: 'p5', nome: 'Maria das Dores', telefone: '(83) 98811-0022', assentoNumero: 15 },
-  ],
-  '2': [
-    { id: 'p6', nome: 'Lucas Ferreira', telefone: '(83) 99400-1122', assentoNumero: 2 },
-    { id: 'p7', nome: 'Beatriz Costa', telefone: '(83) 99500-3344', assentoNumero: 4 },
-  ],
-}
+const mockPassageiros: Passageiro[] = [
+  { id: 'p1', passeioId: '1', nomeCompleto: 'Ana Clara Souza', dataNascimento: '1990-05-10', cpf: '111.222.333-44', whatsapp: '(83) 99101-2233', contatoEmergencia: '(83) 90000-0000', endereco: 'Rua A', pontoEmbarque: 'Centro', formaPagamento: 'pix', statusAlocacao: 'alocado', numeroPoltrona: 3 },
+  { id: 'p2', passeioId: '1', nomeCompleto: 'Carlos Mendes', dataNascimento: '1985-08-20', cpf: '222.333.444-55', whatsapp: '(83) 98877-5544', contatoEmergencia: '(83) 90000-0000', endereco: 'Rua B', pontoEmbarque: 'Shopping', formaPagamento: 'cartao_credito', statusAlocacao: 'alocado', numeroPoltrona: 5 },
+  { id: 'p3', passeioId: '1', nomeCompleto: 'Fernanda Lima', dataNascimento: '1995-12-01', cpf: '333.444.555-66', whatsapp: '(83) 99234-6677', contatoEmergencia: '(83) 90000-0000', endereco: 'Rua C', pontoEmbarque: 'Praça', formaPagamento: 'dinheiro', statusAlocacao: 'alocado', numeroPoltrona: 8 },
+  { id: 'p4', passeioId: '1', nomeCompleto: 'João Pedro Alves', dataNascimento: '1992-03-15', cpf: '444.555.666-77', whatsapp: '(83) 99321-8899', contatoEmergencia: '(83) 90000-0000', endereco: 'Rua D', pontoEmbarque: 'Centro', formaPagamento: 'pix', statusAlocacao: 'alocado', numeroPoltrona: 12 },
+  { id: 'p5', passeioId: '1', nomeCompleto: 'Maria das Dores', dataNascimento: '1980-07-25', cpf: '555.666.777-88', whatsapp: '(83) 98811-0022', contatoEmergencia: '(83) 90000-0000', endereco: 'Rua E', pontoEmbarque: 'Terminal', formaPagamento: 'pix', statusAlocacao: 'alocado', numeroPoltrona: 15 },
+  { id: 'p6', passeioId: '2', nomeCompleto: 'Lucas Ferreira', dataNascimento: '1998-09-30', cpf: '666.777.888-99', whatsapp: '(83) 99400-1122', contatoEmergencia: '(83) 90000-0000', endereco: 'Rua F', pontoEmbarque: 'Centro', formaPagamento: 'dinheiro', statusAlocacao: 'alocado', numeroPoltrona: 2 },
+  { id: 'p7', passeioId: '2', nomeCompleto: 'Beatriz Costa', dataNascimento: '2001-01-12', cpf: '777.888.999-00', whatsapp: '(83) 99500-3344', contatoEmergencia: '(83) 90000-0000', endereco: 'Rua G', pontoEmbarque: 'Centro', formaPagamento: 'cartao_credito', statusAlocacao: 'alocado', numeroPoltrona: 4 },
+]
 
 // ── Helper: detecta o TipoTransporte a partir da string do passeio ────
 function detectarTipo(transporte: string): TipoTransporte {
@@ -45,13 +40,13 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     if (!passeio) return
 
     const tipo = detectarTipo(passeio.transporte)
-    const passageirosDoPasseio = mockPassageiros[passeio.id] ?? []
+    const passageirosDoPasseio = mockPassageiros.filter((p) => p.passeioId === passeio.id)
     setPassageiros(passageirosDoPasseio)
 
     // Gera assentos base e marca os ocupados pelos passageiros mockados
     const base = gerarAssentos(tipo, [])
     const comOcupados: Assento[] = base.map((a) => {
-      const pax = passageirosDoPasseio.find((p) => String(p.assentoNumero) === String(a.numero))
+      const pax = passageirosDoPasseio.find((p) => String(p.numeroPoltrona) === String(a.numero))
       return pax ? { ...a, ocupado: true, passageiroId: pax.id } : a
     })
     setAssentos(comOcupados)
@@ -228,7 +223,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                     </div>
                   ) : (
                     [...passageiros]
-                      .sort((a, b) => Number(a.assentoNumero ?? 0) - Number(b.assentoNumero ?? 0))
+                      .sort((a, b) => Number(a.numeroPoltrona ?? 0) - Number(b.numeroPoltrona ?? 0))
                       .map((pax, idx) => (
                         <div
                           key={pax.id}
@@ -236,13 +231,13 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                         >
                           {/* Badge de Poltrona em destaque */}
                           <div className="w-9 h-9 rounded-full bg-brand-primary flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm shadow-brand-primary/40">
-                            {pax.assentoNumero ?? '—'}
+                            {pax.numeroPoltrona ?? '—'}
                           </div>
 
                           {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-brand-dark font-semibold text-xs truncate">{pax.nome}</p>
-                            <p className="text-brand-dark/50 text-xs">{pax.telefone}</p>
+                            <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
+                            <p className="text-brand-dark/50 text-xs">{pax.whatsapp}</p>
                           </div>
 
                           {/* Posição ordinal */}

@@ -43,7 +43,15 @@ export interface Passeio {
 // ── Passageiro ────────────────────────────────────────────────────────
 export interface Passageiro {
   id: string
-  nome: string
-  telefone: string
-  assentoNumero?: string | number
+  passeioId: string
+  nomeCompleto: string
+  dataNascimento: string
+  cpf: string
+  whatsapp: string
+  contatoEmergencia: string
+  endereco: string
+  pontoEmbarque: string
+  formaPagamento: 'dinheiro' | 'pix' | 'cartao_credito'
+  statusAlocacao: 'alocado' | 'nao_alocado'
+  numeroPoltrona: number | null
 }
