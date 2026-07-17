@@ -1,14 +1,14 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
 
-// TODO: Adicionar chaves do Firebase Console
+// Configurações do Firebase Console
 const firebaseConfig = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: '',
+  apiKey: "AIzaSyAiPPHK06XNgBKruXH8veC7tDx0SSr6PY8",
+  authDomain: "pe-na-estrada-tour.firebaseapp.com",
+  projectId: "pe-na-estrada-tour",
+  storageBucket: "pe-na-estrada-tour.firebasestorage.app",
+  messagingSenderId: "814607424540",
+  appId: "1:814607424540:web:2866f25c94627d21b6d3d9"
 }
 
 const app = initializeApp(firebaseConfig)
