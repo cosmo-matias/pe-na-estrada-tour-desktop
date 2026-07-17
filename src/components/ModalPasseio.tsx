@@ -17,11 +17,11 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
     data: '',
     horarioSaida: '',
     horarioRetorno: '',
-    valor: '',
+    valorFormatado: '',
     locaisEmbarque: '',
     transporte: 'Onibus 40',
     quantidadeTransporte: 1,
-    imageUrl: ''
+    imagem: ''
   })
 
   useEffect(() => {
@@ -32,11 +32,11 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         data: passeioEdicao.data,
         horarioSaida: passeioEdicao.horarioSaida,
         horarioRetorno: passeioEdicao.horarioRetorno,
-        valor: String(passeioEdicao.valor),
+        valorFormatado: passeioEdicao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         locaisEmbarque: passeioEdicao.locaisEmbarque.join(', '),
         transporte: passeioEdicao.transporte,
         quantidadeTransporte: passeioEdicao.quantidadeTransporte,
-        imageUrl: passeioEdicao.imageUrl || ''
+        imagem: passeioEdicao.imagem || ''
       })
     } else {
       setFormData({
@@ -45,16 +45,26 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         data: '',
         horarioSaida: '',
         horarioRetorno: '',
-        valor: '',
+        valorFormatado: '',
         locaisEmbarque: '',
         transporte: 'Onibus 40',
         quantidadeTransporte: 1,
-        imageUrl: ''
+        imagem: ''
       })
     }
   }, [passeioEdicao, aberto])
 
   if (!aberto) return null
+
+  const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '')
+    if (value === '') {
+      setFormData({ ...formData, valorFormatado: '' })
+      return
+    }
+    const floatValue = parseInt(value, 10) / 100
+    setFormData({ ...formData, valorFormatado: floatValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,11 +76,11 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       data: formData.data,
       horarioSaida: formData.horarioSaida,
       horarioRetorno: formData.horarioRetorno,
-      valor: Number(formData.valor),
+      valor: Number(formData.valorFormatado.replace(/\./g, '').replace(',', '.')),
       locaisEmbarque: formData.locaisEmbarque.split(',').map(s => s.trim()).filter(Boolean),
       transporte: formData.transporte,
       quantidadeTransporte: Number(formData.quantidadeTransporte),
-      imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80',
+      imagem: formData.imagem || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80',
       status: passeioEdicao ? passeioEdicao.status : 'a_realizar',
       passageirosAlocados: passeioEdicao ? passeioEdicao.passageirosAlocados : 0
     }
@@ -138,11 +148,11 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Valor (R$)</label>
-              <input type="number" required min="0" step="0.01" value={formData.valor} onChange={e => setFormData({ ...formData, valor: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" placeholder="Ex: 250.00" />
+              <input type="text" required value={formData.valorFormatado} onChange={handleValorChange} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" placeholder="Ex: 250,00" />
             </div>
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">URL da Imagem</label>
-              <input type="url" value={formData.imageUrl} onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" placeholder="https://..." />
+              <input type="url" value={formData.imagem} onChange={e => setFormData({ ...formData, imagem: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" placeholder="https://..." />
             </div>
           </div>
 

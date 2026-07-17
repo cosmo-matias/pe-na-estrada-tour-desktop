@@ -36,7 +36,7 @@ export interface Passeio {
   quantidadeTransporte: number
   status: PasseioStatus
   passageirosAlocados: number
-  imageUrl: string
+  imagem: string
   layoutTransporte?: LayoutTransporte
 }
 

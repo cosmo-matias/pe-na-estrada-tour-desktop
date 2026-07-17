@@ -14,7 +14,7 @@ export const passeiosMock: Passeio[] = [
     quantidadeTransporte: 1,
     status: 'a_realizar',
     passageirosAlocados: 38,
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80',
+    imagem: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80',
   },
   {
     id: '2',
@@ -29,7 +29,7 @@ export const passeiosMock: Passeio[] = [
     quantidadeTransporte: 2,
     status: 'realizado',
     passageirosAlocados: 26,
-    imageUrl: 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&q=80',
+    imagem: 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&q=80',
   },
   {
     id: '3',
@@ -44,6 +44,6 @@ export const passeiosMock: Passeio[] = [
     quantidadeTransporte: 1,
     status: 'cancelado',
     passageirosAlocados: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=600&q=80',
+    imagem: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=600&q=80',
   },
 ]

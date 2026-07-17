@@ -149,7 +149,16 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
 
           <div className="pt-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Ponto de Embarque Desejado</label>
-            <input type="text" value={formData.pontoEmbarque} onChange={e => setFormData({ ...formData, pontoEmbarque: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" placeholder="Ex: Rodoviária Novo Rio" />
+            <select required value={formData.pontoEmbarque} onChange={e => setFormData({ ...formData, pontoEmbarque: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm">
+              <option value="">-- Selecione o local --</option>
+              <option value="Capim">Capim</option>
+              <option value="Mamanguape">Mamanguape</option>
+              <option value="Cuité de Mamanguape">Cuité de Mamanguape</option>
+              <option value="Sapé">Sapé</option>
+              <option value="João Pessoa">João Pessoa</option>
+              <option value="Itapororoca">Itapororoca</option>
+              <option value="Rio Tinto">Rio Tinto</option>
+            </select>
           </div>
 
           <div className="pt-2">

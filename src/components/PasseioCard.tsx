@@ -40,7 +40,7 @@ export function PasseioCard({
     transporte,
     quantidadeTransporte,
     passageirosAlocados,
-    imageUrl,
+    imagem,
   } = passeio
 
   // Regra de negócio visual: Cancelar vs Excluir
@@ -52,7 +52,7 @@ export function PasseioCard({
       {/* ── Imagem do Destino ── */}
       <div className="relative h-36 overflow-hidden">
         <img
-          src={imageUrl}
+          src={imagem}
           alt={`Praia destino ${destino}`}
           className="w-full h-full object-cover"
           onError={(e) => {

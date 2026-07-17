@@ -158,7 +158,7 @@ export function ModalPassageiroDetalhes({ aberto, onFechar, passageiro, todosPas
               {historicoPasseios.map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between p-4 bg-white border border-brand-secondary/30 rounded-2xl shadow-sm">
                   <div className="flex items-center gap-4">
-                    <img src={item.passeio?.imageUrl} alt={item.passeio?.destino} className="w-12 h-12 rounded-lg object-cover" onError={e => (e.currentTarget.src = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80')} />
+                    <img src={item.passeio?.imagem || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80'} alt={item.passeio?.destino} className="w-12 h-12 rounded-lg object-cover" onError={e => (e.currentTarget.src = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80')} />
                     <div>
                       <h4 className="font-bold text-brand-dark">{item.passeio?.destino}</h4>
                       <p className="text-xs text-brand-dark/60 mt-0.5">{item.passeio?.data ? new Date(item.passeio.data).toLocaleDateString('pt-BR') : '-'}</p>
