@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react'
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
+import { auth } from './config/firebase'
+import { Login } from './pages/Login'
 import { Home } from './pages/Home'
 import { Passeios } from './pages/Passeios'
 import { FormularioReserva } from './pages/FormularioReserva'
@@ -21,24 +24,46 @@ const menuItems: MenuItem[] = [
   { id: 'financeiro', label: 'Financeiro', icon: '💰' },
 ]
 
-// ── Componente Principal ──────────────────────────────────────────────
 function App() {
   const [activeMenu, setActiveMenu] = useState<MenuId>('home')
   const [reservaPasseioId, setReservaPasseioId] = useState<string | null>(null)
+  
+  const [user, setUser] = useState<User | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  // Roteamento simples baseado na URL
+  const path = window.location.pathname
 
   useEffect(() => {
-    // Roteamento simples baseado na URL
-    const path = window.location.pathname
     if (path.startsWith('/reserva/')) {
       let id = path.replace('/reserva/', '')
       id = id.replace(/['"%27]/g, '') // Remove aspas indesejadas se existirem na URL colada
       setReservaPasseioId(id)
     }
-  }, [])
+
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u)
+      setAuthLoading(false)
+    })
+    return unsub
+  }, [path])
 
   // Se estiver na rota pública de reserva, renderiza apenas o formulário
-  if (reservaPasseioId) {
-    return <FormularioReserva passeioId={reservaPasseioId} />
+  if (reservaPasseioId || path.startsWith('/reserva/')) {
+    const fallbackId = reservaPasseioId || path.replace('/reserva/', '').replace(/['"%27]/g, '')
+    return <FormularioReserva passeioId={fallbackId} />
+  }
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-screen bg-brand-light">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Login />
   }
 
   return (
@@ -49,15 +74,7 @@ function App() {
 
         {/* Logo */}
         <div className="flex flex-col items-center justify-center px-6 py-8 border-b border-white/10">
-          <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-primary shadow-lg mb-3">
-            <span className="text-2xl">🚌</span>
-          </div>
-          <h1 className="text-white font-bold text-sm tracking-widest uppercase text-center leading-tight">
-            Pé Na Estrada
-          </h1>
-          <p className="text-brand-secondary text-xs mt-1 tracking-wider">
-            Tour & Viagens
-          </p>
+          <img src="/logo.png" alt="Pé Na Estrada" className="w-32 mx-auto mb-6" />
         </div>
 
         {/* Navegação */}
@@ -90,14 +107,23 @@ function App() {
 
         {/* Rodapé */}
         <div className="px-6 py-5 border-t border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-brand-accent flex items-center justify-center text-brand-dark font-bold text-sm">
-              A
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-brand-accent flex items-center justify-center text-brand-dark font-bold text-sm">
+                A
+              </div>
+              <div>
+                <p className="text-white text-xs font-semibold">Admin</p>
+                <p className="text-white/40 text-xs">Gerenciador</p>
+              </div>
             </div>
-            <div>
-              <p className="text-white text-xs font-semibold">Admin</p>
-              <p className="text-white/40 text-xs">Gerenciador</p>
-            </div>
+            <button 
+              onClick={() => signOut(auth)}
+              className="text-white/40 hover:text-white transition-colors"
+              title="Sair"
+            >
+              <span className="text-xl">🚪</span>
+            </button>
           </div>
         </div>
       </aside>

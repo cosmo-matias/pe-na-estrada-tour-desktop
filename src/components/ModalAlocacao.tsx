@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { collection, onSnapshot, query, where, doc, updateDoc, getDocs } from 'firebase/firestore'
+import { useState, useEffect } from 'react'
+import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import type { Passeio, Assento, Passageiro, TipoTransporte, Transacao } from '../types'
 import { MapaAssentos, gerarAssentos } from './MapaAssentos'
@@ -388,7 +388,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                   ) : (
                     [...passageiros]
                       .sort((a, b) => Number(a.numeroPoltrona ?? 0) - Number(b.numeroPoltrona ?? 0))
-                      .map((pax, idx) => (
+                      .map((pax) => (
                         <div key={pax.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-brand-secondary/20 hover:border-brand-primary/30">
                           <div className="w-9 h-9 rounded-full bg-brand-primary flex items-center justify-center text-white font-bold text-sm shadow-sm">{pax.numeroPoltrona ?? '—'}</div>
                           <div className="flex-1 min-w-0">

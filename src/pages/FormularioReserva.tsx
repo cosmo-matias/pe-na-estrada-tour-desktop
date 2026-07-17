@@ -178,9 +178,9 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
         await addDoc(collection(db, 'transacoes'), {
           tipo: 'entrada',
           status: 'pendente',
-          valorTotal: passeio.valor,
+          valorTotal: passeio?.valor,
           valorPago: 0,
-          descricao: `Reserva - ${pax.nomeCompleto} (${passeio.destino})`,
+          descricao: `Reserva - ${pax.nomeCompleto} (${passeio?.destino})`,
           data: new Date().toISOString(),
           dataVencimento: new Date().toISOString().split('T')[0],
           passageiroId: paxRef.id,

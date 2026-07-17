@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { db } from '../config/firebase'
 import type { Passeio } from '../types'
-import { passeiosMock } from '../mocks/passeios'
 import { PasseioCard } from '../components/PasseioCard'
 import { ModalAlocacao } from '../components/ModalAlocacao'
+import { ModalPasseio } from '../components/ModalPasseio'
 
 // ── Configuração das colunas do Kanban ───────────────────────────────
 type StatusKanban = Passeio['status']
@@ -49,15 +51,27 @@ const COLUNAS: KanbanColuna[] = [
 
 // ── Componente Principal ─────────────────────────────────────────────
 export function Passeios() {
-  const [passeios, setPasseios] = useState<Passeio[]>(passeiosMock)
+  const [passeios, setPasseios] = useState<Passeio[]>([])
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'passeios'), (snapshot) => {
+      const ps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Passeio))
+      setPasseios(ps)
+    })
+    return unsub
+  }, [])
 
   // ── Estado do Modal de Alocação ────────────────────────────────────
   const [passeioModal, setPasseioModal] = useState<Passeio | null>(null)
   const [modalAberto, setModalAberto] = useState(false)
 
+  // ── Estado do Modal de Passeio ─────────────────────────────────────
+  const [modalPasseioAberto, setModalPasseioAberto] = useState(false)
+  const [passeioParaEditar, setPasseioParaEditar] = useState<Passeio | undefined>(undefined)
+
   // ── Handlers ──────────────────────────────────────────────────────
   const handleGerarLink = (id: string) => {
-    const url = `http://localhost:5173/reserva/${id}`
+    const url = `https://pe-na-estrada-tour.web.app/reserva/${id}`
     navigator.clipboard.writeText(url)
       .then(() => alert(`✅ Link copiado!\n${url}`))
       .catch(() => alert('❌ Erro ao copiar link. Tente manualmente.'))
@@ -69,10 +83,14 @@ export function Passeios() {
   }
 
   const handleEditar = (id: string) => {
-    alert(`✏️ Editar passeio #${id}\n(Em breve: formulário de edição)`)
+    const passeio = passeios.find(p => p.id === id)
+    if (passeio) {
+      setPasseioParaEditar(passeio)
+      setModalPasseioAberto(true)
+    }
   }
 
-  const handleCancelar = (id: string) => {
+  const handleCancelar = async (id: string) => {
     const passeio = passeios.find((p) => p.id === id)
     if (!passeio) return
     if (
@@ -80,19 +98,17 @@ export function Passeios() {
         `⚠️ Cancelar "${passeio.destino}"?\n\nEste passeio possui ${passeio.passageirosAlocados} passageiro(s) alocado(s). O cancelamento notificará os passageiros.`
       )
     ) {
-      setPasseios((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: 'cancelado' as const } : p))
-      )
+      await updateDoc(doc(db, 'passeios', id), { status: 'cancelado' })
     }
   }
 
-  const handleExcluir = (id: string) => {
+  const handleExcluir = async (id: string) => {
     const passeio = passeios.find((p) => p.id === id)
     if (!passeio) return
     if (
       window.confirm(`🗑️ Excluir permanentemente o passeio "${passeio.destino}"?`)
     ) {
-      setPasseios((prev) => prev.filter((p) => p.id !== id))
+      await deleteDoc(doc(db, 'passeios', id))
     }
   }
 
@@ -112,6 +128,13 @@ export function Passeios() {
         onFechar={() => setModalAberto(false)}
       />
 
+      {/* ── Modal de Criação/Edição de Passeio ── */}
+      <ModalPasseio
+        aberto={modalPasseioAberto}
+        onFechar={() => setModalPasseioAberto(false)}
+        passeioEdicao={passeioParaEditar}
+      />
+
       {/* ── Cabeçalho do Módulo ── */}
       <div className="flex items-center justify-between">
         <div>
@@ -127,7 +150,10 @@ export function Passeios() {
         <button
           id="btn-adicionar-passeio"
           className="flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white font-semibold text-sm rounded-xl shadow-md shadow-brand-primary/30 hover:bg-brand-primary/85 hover:-translate-y-0.5 transition-all duration-200"
-          onClick={() => alert('Em breve: formulário de novo passeio')}
+          onClick={() => {
+            setPasseioParaEditar(undefined)
+            setModalPasseioAberto(true)
+          }}
         >
           <span className="text-base">＋</span>
           Adicionar Novo Passeio

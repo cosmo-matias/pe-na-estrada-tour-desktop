@@ -158,12 +158,9 @@ export function Financeiro() {
               />
               <YAxis stroke="#64748b" fontSize={12} tickFormatter={(val) => `R$ ${val}`} />
               <Tooltip 
-                formatter={(value: number) => [formatarValor(value), '']}
-                labelFormatter={(label) => {
-                  const d = new Date(label)
-                  return isNaN(d.getTime()) ? label : d.toLocaleDateString('pt-BR')
-                }}
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                formatter={(value: any) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), '']}
+                labelStyle={{ color: '#091522', fontWeight: 'bold' }}
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
               />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
               <Bar dataKey="entradas" name="Recebido" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50} />
