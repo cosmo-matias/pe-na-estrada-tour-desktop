@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup } from 'firebase/auth'
-import { auth, googleProvider } from '../config/firebase'
+import { signInWithEmailAndPassword, sendPasswordResetEmail, signInWithPopup, signOut } from 'firebase/auth'
+import { auth, googleProvider, EMAILS_AUTORIZADOS } from '../config/firebase'
 
 export function Login() {
   const [email, setEmail] = useState('')
@@ -23,9 +23,17 @@ export function Login() {
   const handleGoogleLogin = async () => {
     setLoading(true)
     try {
-      await signInWithPopup(auth, googleProvider)
-    } catch (error) {
-      alert('Erro ao fazer login com o Google.')
+      const result = await signInWithPopup(auth, googleProvider)
+      if (result.user.email && !EMAILS_AUTORIZADOS.includes(result.user.email)) {
+        await signOut(auth)
+        throw new Error('Acesso negado: E-mail não autorizado.')
+      }
+    } catch (error: any) {
+      if (error.message === 'Acesso negado: E-mail não autorizado.') {
+        alert('Este e-mail não possui permissão administrativa.')
+      } else {
+        alert('Erro ao fazer login com o Google.')
+      }
     } finally {
       setLoading(false)
     }

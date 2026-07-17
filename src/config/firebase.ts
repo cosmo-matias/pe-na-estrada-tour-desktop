@@ -17,4 +17,8 @@ const app = initializeApp(firebaseConfig)
 export const db = getFirestore(app)
 export const auth = getAuth(app)
 export const googleProvider = new GoogleAuthProvider()
+
+// Lista de e-mails com permissão de acesso administrativo
+export const EMAILS_AUTORIZADOS = ['seu-email@exemplo.com', 'email-do-socio@exemplo.com']
+
 export default app

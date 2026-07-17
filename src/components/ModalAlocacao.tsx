@@ -3,6 +3,8 @@ import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/f
 import { db } from '../config/firebase'
 import type { Passeio, Assento, Passageiro, TipoTransporte, Transacao } from '../types'
 import { MapaAssentos, gerarAssentos } from './MapaAssentos'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 // ── Helper: detecta o TipoTransporte a partir da string do passeio ────
 function detectarTipo(transporte: string): TipoTransporte {
@@ -24,6 +26,7 @@ interface ModalAlocacaoProps {
 export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps) {
   const [assentos, setAssentos] = useState<Assento[]>([])
   const [assentoSelecionado, setAssentoSelecionado] = useState<string | number | null>(null)
+  const [selecionandoPassageiro, setSelecionandoPassageiro] = useState(false)
   const [passageiros, setPassageiros] = useState<Passageiro[]>([])
   const [abaAtiva, setAbaAtiva] = useState<'mapa' | 'lista'>('mapa')
 
@@ -181,16 +184,78 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
   }
 
   function handleGerarResumoPDF() {
-    alert('📄 Resumo PDF gerado no console! (integração com jsPDF em breve)')
+    if (!passeio) return
+    const doc = new jsPDF()
+    const totalVagas = assentos.length
+    const vagasLivres = assentos.filter(a => !a.ocupado).length
+    const vagasOcupadas = totalVagas - vagasLivres
+
+    doc.setFontSize(20)
+    doc.text('Resumo do Passeio', 14, 22)
+    doc.setFontSize(12)
+    doc.text(`Destino: ${passeio.destino}`, 14, 32)
+    doc.text(`Data: ${passeio.data.split('-').reverse().join('/')}`, 14, 40)
+    doc.text(`Total de Vagas: ${totalVagas}`, 14, 48)
+    doc.text(`Vagas Livres: ${vagasLivres}`, 14, 56)
+    doc.text(`Vagas Ocupadas: ${vagasOcupadas}`, 14, 64)
+    doc.save(`Resumo_${passeio.destino.replace(/\s+/g, '_')}.pdf`)
   }
 
   function handleListaDetalhadaPDF() {
-    alert('📋 Lista Detalhada PDF gerada no console! (integração com jsPDF em breve)')
+    if (!passeio) return
+    const doc = new jsPDF()
+    doc.setFontSize(16)
+    doc.text(`Lista de Passageiros - ${passeio.destino}`, 14, 20)
+    
+    const paxsAlocados = passageiros
+      .filter(p => p.numeroPoltrona != null)
+      .sort((a, b) => Number(a.numeroPoltrona) - Number(b.numeroPoltrona))
+
+    const tableData = paxsAlocados.map(p => [
+      p.numeroPoltrona,
+      p.nomeCompleto,
+      p.whatsapp,
+      p.pontoEmbarque || '-'
+    ])
+
+    autoTable(doc, {
+      startY: 30,
+      head: [['Assento', 'Nome Completo', 'WhatsApp', 'Embarque']],
+      body: tableData,
+    })
+
+    doc.save(`Lista_Detalhada_${passeio.destino.replace(/\s+/g, '_')}.pdf`)
   }
 
   function handleConfirmarAlocacao() {
     if (!assentoSelecionado) return
-    alert(`✅ Assento ${assentoSelecionado} selecionado!\n\nEm breve: associar passageiro não alocado.`)
+    setSelecionandoPassageiro(true)
+  }
+
+  async function handleAlocarPassageiro(paxId: string) {
+    try {
+      await updateDoc(doc(db, 'passageiros', paxId), {
+        numeroPoltrona: assentoSelecionado
+      })
+      setSelecionandoPassageiro(false)
+      setAssentoSelecionado(null)
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao alocar passageiro.')
+    }
+  }
+
+  async function handleDesalocarPassageiro(paxId: string) {
+    if(!confirm('Deseja realmente remover este passageiro do assento?')) return
+    try {
+      await updateDoc(doc(db, 'passageiros', paxId), {
+        numeroPoltrona: null
+      })
+      setAssentoSelecionado(null)
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao desalocar passageiro.')
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────
@@ -344,12 +409,40 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
 
           {/* ── COLUNA ESQUERDA: Mapa de Assentos ── */}
           <div className="flex flex-col w-[55%] border-r border-brand-secondary/20 overflow-y-auto p-5 gap-4 flex-shrink-0">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between relative">
               <h3 className="text-brand-dark font-bold text-sm flex items-center gap-2"><span>🚌</span> Mapa de Assentos — {tipo}</h3>
-              {assentoSelecionado && (
+              {assentoSelecionado && !selecionandoPassageiro && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-brand-dark/60">Assento <strong className="text-brand-primary">{assentoSelecionado}</strong></span>
-                  <button onClick={handleConfirmarAlocacao} className="px-3 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-lg">➕ Alocar aqui</button>
+                  {assentos.find(a => a.numero === assentoSelecionado)?.ocupado ? (
+                     <button onClick={() => handleDesalocarPassageiro(assentos.find(a => a.numero === assentoSelecionado)!.passageiroId!)} className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600">✖ Desalocar</button>
+                  ) : (
+                    <button onClick={handleConfirmarAlocacao} className="px-3 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-primary/90">➕ Alocar aqui</button>
+                  )}
+                </div>
+              )}
+              {selecionandoPassageiro && (
+                <div className="absolute right-0 top-10 bg-white shadow-xl border border-brand-secondary/20 rounded-xl z-30 w-80 max-h-80 flex flex-col overflow-hidden">
+                   <div className="flex justify-between items-center p-3 border-b bg-brand-light">
+                     <h4 className="font-bold text-brand-dark text-xs">Alocar no Assento {assentoSelecionado}</h4>
+                     <button onClick={() => setSelecionandoPassageiro(false)} className="text-brand-dark/50 hover:text-brand-dark text-lg leading-none">✕</button>
+                   </div>
+                   <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-white">
+                      {passageiros.filter(p => !p.numeroPoltrona).map(pax => (
+                         <div key={pax.id} className="flex justify-between items-center p-2 border rounded-lg hover:border-brand-primary/50 cursor-pointer bg-brand-light/30" onClick={() => handleAlocarPassageiro(pax.id)}>
+                            <div className="min-w-0 flex-1">
+                               <p className="font-bold text-xs truncate text-brand-dark">{pax.nomeCompleto}</p>
+                               <p className="text-[10px] text-brand-dark/60 truncate">{pax.whatsapp}</p>
+                            </div>
+                            <span className="text-[10px] bg-brand-primary text-white px-2 py-1 rounded font-bold ml-2">Selecionar</span>
+                         </div>
+                      ))}
+                      {passageiros.filter(p => !p.numeroPoltrona).length === 0 && (
+                         <div className="text-center py-6 text-brand-dark/40 text-xs">
+                            Nenhum passageiro sem assento.
+                         </div>
+                      )}
+                   </div>
                 </div>
               )}
             </div>

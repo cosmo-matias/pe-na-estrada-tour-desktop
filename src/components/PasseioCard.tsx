@@ -50,18 +50,18 @@ export function PasseioCard({
     <article className="bg-white rounded-2xl shadow-sm border border-brand-secondary/20 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
 
       {/* ── Imagem do Destino ── */}
-      <div className="relative h-36 overflow-hidden">
+      <div className="relative h-56 overflow-hidden">
         <img
-          src={imagem}
+          src={imagem || 'https://via.placeholder.com/600x300?text=P%C3%A9+Na+Estrada'}
           alt={`Praia destino ${destino}`}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover object-center"
           onError={(e) => {
             (e.target as HTMLImageElement).src =
-              'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80'
+              'https://via.placeholder.com/600x300?text=P%C3%A9+Na+Estrada'
           }}
         />
         {/* Overlay com destino */}
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/80 to-transparent flex items-end p-3">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-3">
           <div>
             <p className="text-white font-bold text-base leading-tight">{destino}</p>
             <p className="text-brand-light/80 text-xs truncate">{local}</p>

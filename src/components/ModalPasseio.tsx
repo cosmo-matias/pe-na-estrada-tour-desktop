@@ -80,7 +80,7 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       locaisEmbarque: formData.locaisEmbarque.split(',').map(s => s.trim()).filter(Boolean),
       transporte: formData.transporte,
       quantidadeTransporte: Number(formData.quantidadeTransporte),
-      imagem: formData.imagem || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80',
+      imagem: formData.imagem,
       status: passeioEdicao ? passeioEdicao.status : 'a_realizar',
       passageirosAlocados: passeioEdicao ? passeioEdicao.passageirosAlocados : 0
     }
