@@ -30,10 +30,10 @@ function DashboardLayout() {
   const [activeMenu, setActiveMenu] = useState<MenuId>('home')
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-brand-light">
+    <div className="min-h-screen flex flex-col md:flex-row w-full bg-brand-light">
 
       {/* ── SIDEBAR ──────────────────────────────────────────────── */}
-      <aside className="flex flex-row md:flex-col w-full md:w-64 md:min-w-64 h-auto md:h-full bg-brand-dark shadow-2xl order-last md:order-first z-50">
+      <aside className="flex flex-row md:flex-col w-full md:w-64 md:min-w-64 h-auto md:min-h-screen bg-brand-dark shadow-2xl order-last md:order-first z-50">
 
         {/* Logo */}
         <div className="hidden md:flex flex-col items-center justify-center px-6 py-8 border-b border-white/10">
@@ -92,7 +92,7 @@ function DashboardLayout() {
       </aside>
 
       {/* ── ÁREA PRINCIPAL ───────────────────────────────────────── */}
-      <main className="flex flex-col flex-1 h-full overflow-hidden">
+      <main className="flex flex-col flex-1 w-full">
 
         {/* Topbar */}
         <header className="flex items-center justify-between px-4 md:px-8 py-3 md:py-4 bg-white/80 backdrop-blur-sm border-b border-brand-secondary/20 shadow-sm flex-shrink-0">
@@ -118,7 +118,7 @@ function DashboardLayout() {
         </header>
 
         {/* Conteúdo */}
-        <div className="flex-1 overflow-y-auto w-full p-4 md:p-8 pb-20">
+        <div className="flex-1 w-full p-4 md:p-8 pb-20">
           {activeMenu === 'home' && <Home />}
           {activeMenu === 'passeios' && <Passeios />}
           {activeMenu === 'passageiros' && <Passageiros />}
