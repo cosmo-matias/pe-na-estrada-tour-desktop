@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
-import { auth } from './config/firebase'
+import { auth, EMAILS_AUTORIZADOS } from './config/firebase'
 import { Login } from './pages/Login'
 import { Home } from './pages/Home'
 import { Passeios } from './pages/Passeios'
@@ -41,8 +41,18 @@ function App() {
       setReservaPasseioId(id)
     }
 
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u)
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        if (!u.email || !EMAILS_AUTORIZADOS.includes(u.email)) {
+          await signOut(auth)
+          setUser(null)
+          alert("Acesso restrito a administradores.")
+        } else {
+          setUser(u)
+        }
+      } else {
+        setUser(null)
+      }
       setAuthLoading(false)
     })
     return unsub
