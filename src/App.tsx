@@ -77,18 +77,18 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-brand-light">
+    <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-brand-light">
 
       {/* ── SIDEBAR ──────────────────────────────────────────────── */}
-      <aside className="flex flex-col w-64 min-w-64 h-full bg-brand-dark shadow-2xl">
+      <aside className="flex flex-row md:flex-col w-full md:w-64 md:min-w-64 h-auto md:h-full bg-brand-dark shadow-2xl order-last md:order-first z-50">
 
         {/* Logo */}
-        <div className="flex flex-col items-center justify-center px-6 py-8 border-b border-white/10">
+        <div className="hidden md:flex flex-col items-center justify-center px-6 py-8 border-b border-white/10">
           <img src="/logo.png" alt="Pé Na Estrada" className="w-32 mx-auto mb-6" />
         </div>
 
         {/* Navegação */}
-        <nav className="flex-1 px-4 py-6 space-y-1">
+        <nav className="flex-1 flex flex-row md:flex-col justify-around md:justify-start px-2 md:px-4 py-2 md:py-6 space-y-0 md:space-y-1 overflow-x-auto">
           {menuItems.map((item) => {
             const isActive = activeMenu === item.id
             return (
@@ -97,18 +97,18 @@ function App() {
                 id={`nav-${item.id}`}
                 onClick={() => setActiveMenu(item.id)}
                 className={`
-                  w-full flex items-center gap-3 px-4 py-3 rounded-xl
-                  text-left font-medium text-sm transition-all duration-200
+                  flex-1 md:w-full flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 px-2 md:px-4 py-2 md:py-3 rounded-xl
+                  text-center md:text-left font-medium text-[10px] md:text-sm transition-all duration-200
                   ${isActive
-                    ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/30 translate-x-1'
-                    : 'text-white/70 hover:bg-white/10 hover:text-white hover:translate-x-1'
+                    ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/30 md:translate-x-1'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white md:hover:translate-x-1'
                   }
                 `}
               >
-                <span className="text-lg">{item.icon}</span>
-                <span className="tracking-wide">{item.label}</span>
+                <span className="text-xl md:text-lg">{item.icon}</span>
+                <span className="tracking-wide hidden sm:block">{item.label}</span>
                 {isActive && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-accent"></span>
+                  <span className="hidden md:block ml-auto w-1.5 h-1.5 rounded-full bg-brand-accent"></span>
                 )}
               </button>
             )
@@ -116,7 +116,7 @@ function App() {
         </nav>
 
         {/* Rodapé */}
-        <div className="px-6 py-5 border-t border-white/10">
+        <div className="hidden md:block px-6 py-5 border-t border-white/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-brand-accent flex items-center justify-center text-brand-dark font-bold text-sm">
@@ -142,17 +142,18 @@ function App() {
       <main className="flex flex-col flex-1 h-full overflow-hidden">
 
         {/* Topbar */}
-        <header className="flex items-center justify-between px-8 py-4 bg-white/80 backdrop-blur-sm border-b border-brand-secondary/20 shadow-sm flex-shrink-0">
+        <header className="flex items-center justify-between px-4 md:px-8 py-3 md:py-4 bg-white/80 backdrop-blur-sm border-b border-brand-secondary/20 shadow-sm flex-shrink-0">
           <div>
-            <h2 className="text-brand-dark font-bold text-xl capitalize">
+            <h2 className="text-brand-dark font-bold text-lg md:text-xl capitalize">
               {menuItems.find((m) => m.id === activeMenu)?.label}
             </h2>
-            <p className="text-brand-primary text-xs mt-0.5">
+            <p className="hidden md:block text-brand-primary text-xs mt-0.5">
               Pé Na Estrada Tour · Sistema de Gerenciamento
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="px-3 py-1.5 rounded-full bg-brand-light border border-brand-secondary/40 text-brand-primary text-xs font-medium">
+            <button onClick={() => signOut(auth)} className="md:hidden text-brand-dark/50 hover:text-brand-dark text-xl mr-2">🚪</button>
+            <div className="hidden md:block px-3 py-1.5 rounded-full bg-brand-light border border-brand-secondary/40 text-brand-primary text-xs font-medium">
               {new Date().toLocaleDateString('pt-BR', {
                 weekday: 'long',
                 year: 'numeric',
@@ -164,7 +165,7 @@ function App() {
         </header>
 
         {/* Conteúdo */}
-        <div className="flex-1 overflow-auto p-8">
+        <div className="flex-1 overflow-y-auto w-full p-4 md:p-8 pb-20">
           {activeMenu === 'home' && <Home />}
           {activeMenu === 'passeios' && <Passeios />}
           {activeMenu === 'passageiros' && <Passageiros />}

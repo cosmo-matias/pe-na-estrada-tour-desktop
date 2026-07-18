@@ -226,7 +226,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
   }
 
   return (
-    <div className="h-screen overflow-y-auto w-full bg-brand-light flex flex-col items-center p-6 sm:p-12 font-sans text-brand-dark">
+    <div className="min-h-screen w-full bg-brand-light flex flex-col items-center py-6 px-3 sm:p-12 font-sans text-brand-dark">
       {/* ── Cabeçalho Principal ── */}
       <div className="flex flex-col items-center justify-center mb-8">
         <div className="flex items-center justify-center w-16 h-16 rounded-3xl bg-brand-primary shadow-lg mb-4 text-3xl">
@@ -238,7 +238,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
         <p className="text-brand-primary font-medium text-sm mt-1">Formulário de Reserva</p>
       </div>
 
-      <div className="w-full max-w-3xl space-y-6">
+      <div className="w-full max-w-2xl mx-auto space-y-6">
         
         {/* ── Card de Informações do Passeio ── */}
         <div className="bg-white rounded-3xl shadow-md p-6 border-l-8 border-brand-primary flex flex-col sm:flex-row gap-6 items-start sm:items-center">
@@ -262,7 +262,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
         </div>
 
         {/* ── Formulário Card Principal ── */}
-        <div className="bg-white rounded-3xl shadow-xl w-full p-8 border border-brand-secondary/30">
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-5 sm:p-8 mx-auto border border-brand-secondary/30">
           
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 pb-6 border-b border-brand-secondary/20 gap-4">
             <h2 className="text-xl font-bold text-brand-dark">
@@ -320,7 +320,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                           value={pax.nomeCompleto}
                           onChange={(e) => handleChange(idx, e)}
                           placeholder="Ex: João da Silva"
-                          className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                          className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -331,7 +331,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                           name="dataNascimento"
                           value={pax.dataNascimento}
                           onChange={(e) => handleChange(idx, e)}
-                          className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                          className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -348,7 +348,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                           onChange={(e) => handleChange(idx, e)}
                           inputMode="numeric"
                           placeholder="000.000.000-00"
-                          className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                          className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -361,7 +361,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                           onChange={(e) => handleChange(idx, e)}
                           inputMode="numeric"
                           placeholder="(00) 90000-0000"
-                          className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                          className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -376,7 +376,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                           value={pax.endereco.logradouro}
                           onChange={(e) => handleEnderecoChange(idx, 'logradouro', e.target.value)}
                           placeholder="Ex: Rua das Flores, 123, Apto 4"
-                          className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                          className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -387,7 +387,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                           value={pax.endereco.bairro}
                           onChange={(e) => handleEnderecoChange(idx, 'bairro', e.target.value)}
                           placeholder="Ex: Centro"
-                          className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                          className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-5">
@@ -399,7 +399,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                             value={pax.endereco.cidade}
                             onChange={(e) => handleEnderecoChange(idx, 'cidade', e.target.value)}
                             placeholder="Ex: João Pessoa"
-                            className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                            className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
                           />
                         </div>
                         <div className="flex flex-col gap-1.5">
@@ -426,7 +426,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                         value={pax.contatoEmergencia}
                         onChange={(e) => handleChange(idx, e)}
                         placeholder="Nome e Telefone de um familiar"
-                        className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                        className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
                       />
                     </div>
 
@@ -439,7 +439,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                           name="pontoEmbarque"
                           value={pax.pontoEmbarque}
                           onChange={(e) => handleChange(idx, e)}
-                          className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all appearance-none"
+                          className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all appearance-none"
                         >
                           <option value="" disabled>Selecione um local</option>
                           <option value="Capim">Capim</option>
@@ -458,7 +458,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                           name="formaPagamento"
                           value={pax.formaPagamento}
                           onChange={(e) => handleChange(idx, e)}
-                          className="w-full px-4 py-3 rounded-xl bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all appearance-none"
+                          className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all appearance-none"
                         >
                           <option value="pix">PIX</option>
                           <option value="cartao_credito">Cartão de Crédito</option>
