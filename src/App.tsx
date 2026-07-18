@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { auth, EMAILS_AUTORIZADOS } from './config/firebase'
 import { Login } from './pages/Login'
@@ -24,57 +25,9 @@ const menuItems: MenuItem[] = [
   { id: 'financeiro', label: 'Financeiro', icon: '💰' },
 ]
 
-function App() {
+// ── Componente de Layout do Dashboard ───────────────────────────────
+function DashboardLayout() {
   const [activeMenu, setActiveMenu] = useState<MenuId>('home')
-  const [reservaPasseioId, setReservaPasseioId] = useState<string | null>(null)
-  
-  const [user, setUser] = useState<User | null>(null)
-  const [authLoading, setAuthLoading] = useState(true)
-
-  // Roteamento simples baseado na URL
-  const path = window.location.pathname
-
-  useEffect(() => {
-    if (path.startsWith('/reserva/')) {
-      let id = path.replace('/reserva/', '')
-      id = id.replace(/['"%27]/g, '') // Remove aspas indesejadas se existirem na URL colada
-      setReservaPasseioId(id)
-    }
-
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        if (!u.email || !EMAILS_AUTORIZADOS.includes(u.email)) {
-          await signOut(auth)
-          setUser(null)
-          alert("Acesso restrito a administradores.")
-        } else {
-          setUser(u)
-        }
-      } else {
-        setUser(null)
-      }
-      setAuthLoading(false)
-    })
-    return unsub
-  }, [path])
-
-  // Se estiver na rota pública de reserva, renderiza apenas o formulário
-  if (reservaPasseioId || path.startsWith('/reserva/')) {
-    const fallbackId = reservaPasseioId || path.replace('/reserva/', '').replace(/['"%27]/g, '')
-    return <FormularioReserva passeioId={fallbackId} />
-  }
-
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen w-screen bg-brand-light">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return <Login />
-  }
 
   return (
     <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-brand-light">
@@ -176,4 +129,60 @@ function App() {
   )
 }
 
-export default App
+// ── Roteador Principal ──────────────────────────────────────────────────
+function AppWrapper() {
+  const [user, setUser] = useState<User | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        if (!u.email || !EMAILS_AUTORIZADOS.includes(u.email)) {
+          await signOut(auth)
+          setUser(null)
+          alert("Acesso restrito a administradores.")
+        } else {
+          setUser(u)
+        }
+      } else {
+        setUser(null)
+      }
+      setAuthLoading(false)
+    })
+    return unsub
+  }, [])
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-screen bg-brand-light">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+      </div>
+    )
+  }
+
+  // Wrapper para a rota de formulário de reserva que captura o ID da URL via hook do react-router
+  const FormularioReservaWrapper = () => {
+    const { passeioId } = useParams()
+    return <FormularioReserva passeioId={passeioId || ''} />
+  }
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/reserva/:passeioId" element={<FormularioReservaWrapper />} />
+        
+        {/* Rota de Login que redireciona pro dashboard se já estiver logado */}
+        <Route path="/login" element={user && EMAILS_AUTORIZADOS.includes(user.email || '') ? <Navigate to="/" replace /> : <Login />} />
+        
+        {/* Rotas protegidas (Dashboard) */}
+        <Route path="/*" element={
+          user && EMAILS_AUTORIZADOS.includes(user.email || '') 
+            ? <DashboardLayout /> 
+            : <Navigate to="/login" replace />
+        } />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+export default AppWrapper

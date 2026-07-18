@@ -59,7 +59,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
   // Estados do Passeio
   const [passeio, setPasseio] = useState<Passeio | null>(null)
   const [loading, setLoading] = useState(true)
-  const [erroPasseio, setErroPasseio] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
 
   // Estados do Formulário
   const [quantidadeVagas, setQuantidadeVagas] = useState(1)
@@ -96,7 +96,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
       if (mock) {
         setPasseio(mock)
       } else {
-        setErroPasseio(true)
+        setErro('Passeio não encontrado.')
       }
       setLoading(false)
     }
@@ -207,22 +207,11 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-brand-light flex flex-col items-center justify-center p-6 text-brand-dark">
-        <div className="animate-spin text-4xl mb-4">⏳</div>
-        <p className="font-bold animate-pulse text-brand-primary">Carregando informações do passeio...</p>
-      </div>
-    )
+    return <div className="min-h-screen flex items-center justify-center">Carregando detalhes do passeio...</div>;
   }
 
-  if (erroPasseio || !passeio) {
-    return (
-      <div className="min-h-screen bg-brand-light flex flex-col items-center justify-center p-6 text-brand-dark">
-        <div className="text-4xl mb-4">🚫</div>
-        <h2 className="font-bold text-xl mb-2">Passeio não encontrado</h2>
-        <p className="text-brand-dark/60 text-sm">Verifique se o link está correto.</p>
-      </div>
-    )
+  if (erro || !passeio) {
+    return <div className="min-h-screen flex items-center justify-center">Passeio não encontrado ou indisponível.</div>;
   }
 
   return (
