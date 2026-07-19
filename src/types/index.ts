@@ -40,6 +40,7 @@ export interface Passeio {
   valor: number
   locaisEmbarque: string[]
   transportes?: TransporteFrota[]
+  capacidade?: number
   // Legacy fields (optional so old records don't break TS)
   transporte?: string
   quantidadeTransporte?: number

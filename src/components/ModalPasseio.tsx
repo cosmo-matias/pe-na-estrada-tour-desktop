@@ -19,9 +19,10 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
     horarioRetorno: '',
     valorFormatado: '',
     locaisEmbarque: '',
-    transportes: [] as TransporteFrota[],
     imagem: ''
   })
+  
+  const [frota, setFrota] = useState<TransporteFrota[]>([])
 
   useEffect(() => {
     if (passeioEdicao) {
@@ -33,9 +34,9 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         horarioRetorno: passeioEdicao.horarioRetorno,
         valorFormatado: passeioEdicao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         locaisEmbarque: passeioEdicao.locaisEmbarque.join(', '),
-        transportes: passeioEdicao.transportes || [],
         imagem: passeioEdicao.imagem || ''
       })
+      setFrota(passeioEdicao.transportes || [])
     } else {
       setFormData({
         destino: '',
@@ -45,9 +46,9 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         horarioRetorno: '',
         valorFormatado: '',
         locaisEmbarque: '',
-        transportes: [{ id: Date.now().toString(), nome: 'Veículo 1', tipo: 'Onibus 50', capacidade: 50 }],
         imagem: ''
       })
+      setFrota([{ id: Date.now().toString(), nome: 'Ônibus Principal', tipo: 'Onibus 50', capacidade: 50 }])
     }
   }, [passeioEdicao, aberto])
 
@@ -75,7 +76,8 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       horarioRetorno: formData.horarioRetorno,
       valor: Number(formData.valorFormatado.replace(/\./g, '').replace(',', '.')),
       locaisEmbarque: formData.locaisEmbarque.split(',').map(s => s.trim()).filter(Boolean),
-      transportes: formData.transportes,
+      transportes: frota,
+      capacidade: frota.reduce((acc, v) => acc + v.capacidade, 0),
       imagem: formData.imagem,
       status: passeioEdicao ? passeioEdicao.status : 'a_realizar',
       passageirosAlocados: passeioEdicao ? passeioEdicao.passageirosAlocados : 0
@@ -164,13 +166,10 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
               <button
                 type="button"
                 onClick={() => {
-                  setFormData(prev => ({
+                  setFrota(prev => [
                     ...prev,
-                    transportes: [
-                      ...prev.transportes,
-                      { id: Date.now().toString(), nome: `Veículo ${prev.transportes.length + 1}`, tipo: 'Onibus 50', capacidade: 50 }
-                    ]
-                  }))
+                    { id: Date.now().toString(), nome: `Veículo ${prev.length + 1}`, tipo: 'Onibus 50', capacidade: 50 }
+                  ])
                 }}
                 className="text-xs bg-brand-primary/10 text-brand-primary px-3 py-1.5 rounded-lg font-bold hover:bg-brand-primary/20 transition-colors"
               >
@@ -179,7 +178,7 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
             </div>
             
             <div className="space-y-3">
-              {formData.transportes.map((veiculo, index) => (
+              {frota.map((veiculo, index) => (
                 <div key={veiculo.id} className="flex gap-3 items-end bg-brand-light/50 p-3 rounded-xl border border-brand-secondary/20">
                   <div className="flex-1">
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark/50 mb-1">Nome/Placa</label>
@@ -188,9 +187,9 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
                       required 
                       value={veiculo.nome} 
                       onChange={e => {
-                        const newTransportes = [...formData.transportes]
-                        newTransportes[index].nome = e.target.value
-                        setFormData({ ...formData, transportes: newTransportes })
+                        const novaFrota = [...frota]
+                        novaFrota[index].nome = e.target.value
+                        setFrota(novaFrota)
                       }} 
                       className="w-full px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg focus:border-brand-primary outline-none text-sm" 
                       placeholder="Ex: Ônibus Principal" 
@@ -201,16 +200,16 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
                     <select 
                       value={veiculo.tipo} 
                       onChange={e => {
-                        const newTransportes = [...formData.transportes]
+                        const novaFrota = [...frota]
                         const tipo = e.target.value as TipoTransporte
                         let capacidade = 50
                         if (tipo === 'Onibus 40') capacidade = 40
                         if (tipo === 'Van 14') capacidade = 14
                         if (tipo === 'Van 12') capacidade = 12
                         
-                        newTransportes[index].tipo = tipo
-                        newTransportes[index].capacidade = capacidade
-                        setFormData({ ...formData, transportes: newTransportes })
+                        novaFrota[index].tipo = tipo
+                        novaFrota[index].capacidade = capacidade
+                        setFrota(novaFrota)
                       }} 
                       className="w-full px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg focus:border-brand-primary outline-none text-sm"
                     >
@@ -223,12 +222,12 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
                   <button
                     type="button"
                     onClick={() => {
-                      if (formData.transportes.length === 1) {
+                      if (frota.length === 1) {
                         alert('O passeio precisa de pelo menos um veículo.')
                         return
                       }
-                      const newTransportes = formData.transportes.filter(v => v.id !== veiculo.id)
-                      setFormData({ ...formData, transportes: newTransportes })
+                      const novaFrota = frota.filter(v => v.id !== veiculo.id)
+                      setFrota(novaFrota)
                     }}
                     className="h-[38px] px-3 bg-red-50 text-red-500 rounded-lg font-bold hover:bg-red-100 transition-colors"
                   >
