@@ -431,13 +431,9 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                           className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all appearance-none"
                         >
                           <option value="" disabled>Selecione um local</option>
-                          <option value="Capim">Capim</option>
-                          <option value="Mamanguape">Mamanguape</option>
-                          <option value="Cuité de Mamanguape">Cuité de Mamanguape</option>
-                          <option value="Sapé">Sapé</option>
-                          <option value="João Pessoa">João Pessoa</option>
-                          <option value="Itapororoca">Itapororoca</option>
-                          <option value="Rio Tinto">Rio Tinto</option>
+                          {passeio?.locaisEmbarque?.map(local => (
+                            <option key={local} value={local}>{local}</option>
+                          ))}
                         </select>
                       </div>
                       <div className="flex flex-col gap-1.5">

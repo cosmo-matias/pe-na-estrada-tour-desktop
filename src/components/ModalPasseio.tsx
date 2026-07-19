@@ -18,11 +18,11 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
     horarioSaida: '',
     horarioRetorno: '',
     valorFormatado: '',
-    locaisEmbarque: '',
-    imagem: '',
-    transporte: 'Onibus 50' as TipoTransporte,
-    quantidadeTransporte: 1
+    locaisEmbarque: [] as string[],
+    imagem: ''
   })
+  
+  const [linhasFrota, setLinhasFrota] = useState<{ tipo: TipoTransporte, quantidade: number }[]>([{ tipo: 'Onibus 50', quantidade: 1 }])
 
   useEffect(() => {
     if (passeioEdicao) {
@@ -33,11 +33,20 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         horarioSaida: passeioEdicao.horarioSaida,
         horarioRetorno: passeioEdicao.horarioRetorno,
         valorFormatado: passeioEdicao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-        locaisEmbarque: passeioEdicao.locaisEmbarque.join(', '),
-        imagem: passeioEdicao.imagem || '',
-        transporte: passeioEdicao.transportes?.[0]?.tipo || (passeioEdicao.transporte as TipoTransporte) || 'Onibus 50',
-        quantidadeTransporte: passeioEdicao.transportes?.length || passeioEdicao.quantidadeTransporte || 1
+        locaisEmbarque: passeioEdicao.locaisEmbarque || [],
+        imagem: passeioEdicao.imagem || ''
       })
+      if (passeioEdicao.transportes && passeioEdicao.transportes.length > 0) {
+        const contagem: Record<string, number> = {}
+        passeioEdicao.transportes.forEach(t => {
+          contagem[t.tipo] = (contagem[t.tipo] || 0) + 1
+        })
+        setLinhasFrota(Object.entries(contagem).map(([tipo, qtd]) => ({ tipo: tipo as TipoTransporte, quantidade: qtd })))
+      } else if (passeioEdicao.transporte) {
+        setLinhasFrota([{ tipo: passeioEdicao.transporte as TipoTransporte, quantidade: passeioEdicao.quantidadeTransporte || 1 }])
+      } else {
+        setLinhasFrota([{ tipo: 'Onibus 50', quantidade: 1 }])
+      }
     } else {
       setFormData({
         destino: '',
@@ -46,11 +55,10 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         horarioSaida: '',
         horarioRetorno: '',
         valorFormatado: '',
-        locaisEmbarque: '',
-        imagem: '',
-        transporte: 'Onibus 50',
-        quantidadeTransporte: 1
+        locaisEmbarque: [],
+        imagem: ''
       })
+      setLinhasFrota([{ tipo: 'Onibus 50', quantidade: 1 }])
     }
   }, [passeioEdicao, aberto])
 
@@ -70,16 +78,22 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
     e.preventDefault()
     setLoading(true)
 
-    const transportes: TransporteFrota[] = Array.from({ length: formData.quantidadeTransporte }).map((_, index) => {
-      let capacidade = 50
-      if (formData.transporte === 'Onibus 40') capacidade = 40
-      if (formData.transporte === 'Van 14') capacidade = 14
-      if (formData.transporte === 'Van 12') capacidade = 12
-      return {
-        id: Date.now().toString() + index,
-        nome: `Veículo ${index + 1}`,
-        tipo: formData.transporte as TipoTransporte,
-        capacidade
+    const frotaFinal: TransporteFrota[] = []
+    let contadorVeiculo = 1
+    linhasFrota.forEach(linha => {
+      for (let i = 0; i < linha.quantidade; i++) {
+        let capacidade = 50
+        if (linha.tipo === 'Onibus 40') capacidade = 40
+        if (linha.tipo === 'Van 14') capacidade = 14
+        if (linha.tipo === 'Van 12') capacidade = 12
+
+        frotaFinal.push({
+          id: Date.now().toString() + contadorVeiculo,
+          nome: `Veículo ${contadorVeiculo} (${linha.tipo})`,
+          tipo: linha.tipo,
+          capacidade
+        })
+        contadorVeiculo++
       }
     })
 
@@ -90,11 +104,9 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       horarioSaida: formData.horarioSaida,
       horarioRetorno: formData.horarioRetorno,
       valor: Number(formData.valorFormatado.replace(/\./g, '').replace(',', '.')),
-      locaisEmbarque: formData.locaisEmbarque.split(',').map(s => s.trim()).filter(Boolean),
-      transportes,
-      capacidade: transportes.reduce((acc, v) => acc + v.capacidade, 0),
-      transporte: formData.transporte,
-      quantidadeTransporte: formData.quantidadeTransporte,
+      locaisEmbarque: formData.locaisEmbarque,
+      transportes: frotaFinal,
+      capacidade: frotaFinal.reduce((acc, v) => acc + v.capacidade, 0),
       imagem: formData.imagem,
       status: passeioEdicao ? passeioEdicao.status : 'a_realizar',
       passageirosAlocados: passeioEdicao ? passeioEdicao.passageirosAlocados : 0
@@ -172,24 +184,96 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Locais de Embarque (separados por vírgula)</label>
-            <input type="text" required value={formData.locaisEmbarque} onChange={e => setFormData({ ...formData, locaisEmbarque: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" placeholder="Ex: Posto Ipiranga, Rodoviária, Praça Matriz" />
+            <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Locais de Embarque</label>
+            <div className="flex flex-wrap gap-2">
+              {['Capim', 'Mamanguape', 'Cuité de Mamanguape', 'Sapé', 'João Pessoa', 'Itapororoca', 'Rio Tinto'].map(local => (
+                <label key={local} className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-xl border border-brand-secondary/30 hover:border-brand-primary/50 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={formData.locaisEmbarque.includes(local)} 
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({ ...formData, locaisEmbarque: [...formData.locaisEmbarque, local] })
+                      } else {
+                        setFormData({ ...formData, locaisEmbarque: formData.locaisEmbarque.filter(l => l !== local) })
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-brand-secondary text-brand-primary focus:ring-brand-primary"
+                  />
+                  <span className="text-sm text-brand-dark font-medium">{local}</span>
+                </label>
+              ))}
+            </div>
+            {formData.locaisEmbarque.length === 0 && (
+              <p className="text-xs text-red-500 mt-2">* Selecione ao menos um local de embarque</p>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Transporte</label>
-              <select value={formData.transporte} onChange={e => setFormData({ ...formData, transporte: e.target.value as TipoTransporte })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm">
-                <option value="Onibus 50">Ônibus (50 lugares)</option>
-                <option value="Onibus 40">Ônibus (40 lugares)</option>
-                <option value="Van 14">Van (14 lugares)</option>
-                <option value="Van 12">Van (12 lugares)</option>
-              </select>
+          <div className="pt-4 border-t border-brand-secondary/20">
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60">Frota do Passeio (Mista)</label>
             </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Quantidade de Veículos</label>
-              <input type="number" required min="1" value={formData.quantidadeTransporte} onChange={e => setFormData({ ...formData, quantidadeTransporte: Number(e.target.value) })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" />
+            
+            <div className="space-y-3">
+              {linhasFrota.map((linha, index) => (
+                <div key={index} className="flex gap-3 items-end bg-brand-light/50 p-3 rounded-xl border border-brand-secondary/20">
+                  <div className="flex-[2]">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark/50 mb-1">Tipo de Transporte</label>
+                    <select 
+                      value={linha.tipo} 
+                      onChange={e => {
+                        const novasLinhas = [...linhasFrota]
+                        novasLinhas[index].tipo = e.target.value as TipoTransporte
+                        setLinhasFrota(novasLinhas)
+                      }} 
+                      className="w-full px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg focus:border-brand-primary outline-none text-sm"
+                    >
+                      <option value="Onibus 50">Ônibus (50 lugares)</option>
+                      <option value="Onibus 40">Ônibus (40 lugares)</option>
+                      <option value="Van 14">Van (14 lugares)</option>
+                      <option value="Van 12">Van (12 lugares)</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark/50 mb-1">Quantidade</label>
+                    <input 
+                      type="number" 
+                      required 
+                      min="1"
+                      value={linha.quantidade} 
+                      onChange={e => {
+                        const novasLinhas = [...linhasFrota]
+                        novasLinhas[index].quantidade = Number(e.target.value)
+                        setLinhasFrota(novasLinhas)
+                      }} 
+                      className="w-full px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg focus:border-brand-primary outline-none text-sm" 
+                    />
+                  </div>
+                  {linhasFrota.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const novasLinhas = linhasFrota.filter((_, i) => i !== index)
+                        setLinhasFrota(novasLinhas)
+                      }}
+                      className="h-[38px] px-3 bg-red-50 text-red-500 rounded-lg font-bold hover:bg-red-100 transition-colors"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
+            
+            <button
+              type="button"
+              onClick={() => {
+                setLinhasFrota(prev => [...prev, { tipo: 'Onibus 50', quantidade: 1 }])
+              }}
+              className="mt-3 text-xs bg-brand-primary/10 text-brand-primary px-3 py-2 rounded-lg font-bold hover:bg-brand-primary/20 transition-colors w-full"
+            >
+              + Adicionar Outro Transporte
+            </button>
           </div>
 
           <div className="pt-6 border-t border-brand-secondary/20 flex gap-3">
