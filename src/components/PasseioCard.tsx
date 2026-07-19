@@ -37,6 +37,7 @@ export function PasseioCard({
     horarioRetorno,
     valor,
     locaisEmbarque,
+    transportes,
     transporte,
     quantidadeTransporte,
     passageirosAlocados,
@@ -94,8 +95,14 @@ export function PasseioCard({
         <div className="flex items-center gap-2 bg-brand-light rounded-lg px-3 py-2">
           <span className="text-sm">🚌</span>
           <div className="min-w-0">
-            <p className="text-brand-dark text-xs font-semibold truncate">{transporte}</p>
-            <p className="text-brand-primary/70 text-xs">{quantidadeTransporte}x unidade(s)</p>
+            <p className="text-brand-dark text-xs font-semibold truncate">
+              {transportes ? `Frota de ${transportes.length} veículo(s)` : transporte}
+            </p>
+            <p className="text-brand-primary/70 text-xs">
+              {transportes 
+                ? `Capacidade: ${transportes.reduce((acc, v) => acc + v.capacidade, 0)} vagas` 
+                : `${quantidadeTransporte || 1}x unidade(s)`}
+            </p>
           </div>
         </div>
 

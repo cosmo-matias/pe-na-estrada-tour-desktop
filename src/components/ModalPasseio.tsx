@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
-import type { Passeio } from '../types'
+import type { Passeio, TransporteFrota, TipoTransporte } from '../types'
 
 interface ModalPasseioProps {
   aberto: boolean
@@ -19,8 +19,7 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
     horarioRetorno: '',
     valorFormatado: '',
     locaisEmbarque: '',
-    transporte: 'Onibus 40',
-    quantidadeTransporte: 1,
+    transportes: [] as TransporteFrota[],
     imagem: ''
   })
 
@@ -34,8 +33,7 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         horarioRetorno: passeioEdicao.horarioRetorno,
         valorFormatado: passeioEdicao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         locaisEmbarque: passeioEdicao.locaisEmbarque.join(', '),
-        transporte: passeioEdicao.transporte,
-        quantidadeTransporte: passeioEdicao.quantidadeTransporte,
+        transportes: passeioEdicao.transportes || [],
         imagem: passeioEdicao.imagem || ''
       })
     } else {
@@ -47,8 +45,7 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         horarioRetorno: '',
         valorFormatado: '',
         locaisEmbarque: '',
-        transporte: 'Onibus 40',
-        quantidadeTransporte: 1,
+        transportes: [{ id: Date.now().toString(), nome: 'Veículo 1', tipo: 'Onibus 50', capacidade: 50 }],
         imagem: ''
       })
     }
@@ -78,8 +75,7 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       horarioRetorno: formData.horarioRetorno,
       valor: Number(formData.valorFormatado.replace(/\./g, '').replace(',', '.')),
       locaisEmbarque: formData.locaisEmbarque.split(',').map(s => s.trim()).filter(Boolean),
-      transporte: formData.transporte,
-      quantidadeTransporte: Number(formData.quantidadeTransporte),
+      transportes: formData.transportes,
       imagem: formData.imagem,
       status: passeioEdicao ? passeioEdicao.status : 'a_realizar',
       passageirosAlocados: passeioEdicao ? passeioEdicao.passageirosAlocados : 0
@@ -161,19 +157,85 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
             <input type="text" required value={formData.locaisEmbarque} onChange={e => setFormData({ ...formData, locaisEmbarque: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" placeholder="Ex: Posto Ipiranga, Rodoviária, Praça Matriz" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Transporte</label>
-              <select value={formData.transporte} onChange={e => setFormData({ ...formData, transporte: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm">
-                <option value="Onibus 50">Ônibus (50 lugares)</option>
-                <option value="Onibus 40">Ônibus (40 lugares)</option>
-                <option value="Van 14">Van (14 lugares)</option>
-                <option value="Van 12">Van (12 lugares)</option>
-              </select>
+          {/* ── Frota do Passeio ── */}
+          <div className="pt-4 border-t border-brand-secondary/20">
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60">Frota do Passeio</label>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    transportes: [
+                      ...prev.transportes,
+                      { id: Date.now().toString(), nome: `Veículo ${prev.transportes.length + 1}`, tipo: 'Onibus 50', capacidade: 50 }
+                    ]
+                  }))
+                }}
+                className="text-xs bg-brand-primary/10 text-brand-primary px-3 py-1.5 rounded-lg font-bold hover:bg-brand-primary/20 transition-colors"
+              >
+                + Adicionar Veículo
+              </button>
             </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Quantidade de Veículos</label>
-              <input type="number" required min="1" value={formData.quantidadeTransporte} onChange={e => setFormData({ ...formData, quantidadeTransporte: Number(e.target.value) })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" />
+            
+            <div className="space-y-3">
+              {formData.transportes.map((veiculo, index) => (
+                <div key={veiculo.id} className="flex gap-3 items-end bg-brand-light/50 p-3 rounded-xl border border-brand-secondary/20">
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark/50 mb-1">Nome/Placa</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={veiculo.nome} 
+                      onChange={e => {
+                        const newTransportes = [...formData.transportes]
+                        newTransportes[index].nome = e.target.value
+                        setFormData({ ...formData, transportes: newTransportes })
+                      }} 
+                      className="w-full px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg focus:border-brand-primary outline-none text-sm" 
+                      placeholder="Ex: Ônibus Principal" 
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark/50 mb-1">Tipo</label>
+                    <select 
+                      value={veiculo.tipo} 
+                      onChange={e => {
+                        const newTransportes = [...formData.transportes]
+                        const tipo = e.target.value as TipoTransporte
+                        let capacidade = 50
+                        if (tipo === 'Onibus 40') capacidade = 40
+                        if (tipo === 'Van 14') capacidade = 14
+                        if (tipo === 'Van 12') capacidade = 12
+                        
+                        newTransportes[index].tipo = tipo
+                        newTransportes[index].capacidade = capacidade
+                        setFormData({ ...formData, transportes: newTransportes })
+                      }} 
+                      className="w-full px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg focus:border-brand-primary outline-none text-sm"
+                    >
+                      <option value="Onibus 50">Ônibus (50 lugares)</option>
+                      <option value="Onibus 40">Ônibus (40 lugares)</option>
+                      <option value="Van 14">Van (14 lugares)</option>
+                      <option value="Van 12">Van (12 lugares)</option>
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formData.transportes.length === 1) {
+                        alert('O passeio precisa de pelo menos um veículo.')
+                        return
+                      }
+                      const newTransportes = formData.transportes.filter(v => v.id !== veiculo.id)
+                      setFormData({ ...formData, transportes: newTransportes })
+                    }}
+                    className="h-[38px] px-3 bg-red-50 text-red-500 rounded-lg font-bold hover:bg-red-100 transition-colors"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 

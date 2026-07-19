@@ -239,7 +239,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
               <p><strong>Data:</strong> {passeio.data.split('-').reverse().join('/')}</p>
               <p><strong>Saída:</strong> {passeio.horarioSaida}</p>
               <p><strong>Retorno:</strong> {passeio.horarioRetorno}</p>
-              <p><strong>Transporte:</strong> {passeio.transporte}</p>
+              <p><strong>Transporte:</strong> {passeio.transportes ? passeio.transportes.map(v => v.nome).join(' + ') : passeio.transporte}</p>
             </div>
           </div>
           <div className="bg-brand-light py-3 px-6 rounded-2xl border border-brand-primary/20 text-center flex-shrink-0">

@@ -53,7 +53,9 @@ export function Home() {
     let totalAlocados = 0
 
     proximosPasseios.forEach((p) => {
-      const capacidade = getCapacidade(detectarTipo(p.transporte))
+      const capacidade = p.transportes
+        ? p.transportes.reduce((acc, v) => acc + v.capacidade, 0)
+        : getCapacidade(detectarTipo(p.transporte || 'Onibus 40')) * (p.quantidadeTransporte || 1)
       const alocados = passageiros.filter(pax => pax.passeioId === p.id).length
       totalCapacidade += capacidade
       totalAlocados += alocados
@@ -115,7 +117,9 @@ export function Home() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
             {proximosPasseios.map((passeio) => {
-              const capacidade = getCapacidade(detectarTipo(passeio.transporte))
+              const capacidade = passeio.transportes
+                ? passeio.transportes.reduce((acc, v) => acc + v.capacidade, 0)
+                : getCapacidade(detectarTipo(passeio.transporte || 'Onibus 40')) * (passeio.quantidadeTransporte || 1)
               const alocados = passageiros.filter((p) => p.passeioId === passeio.id).length
               const faltam = capacidade - alocados
               const porcentagem = Math.min(100, Math.round((alocados / capacidade) * 100))

@@ -22,6 +22,13 @@ export interface LayoutTransporte {
   assentos: Assento[]
 }
 
+export interface TransporteFrota {
+  id: string
+  nome: string
+  tipo: TipoTransporte
+  capacidade: number
+}
+
 // ── Passeio ───────────────────────────────────────────────────────────
 export interface Passeio {
   id: string
@@ -32,8 +39,10 @@ export interface Passeio {
   horarioRetorno: string
   valor: number
   locaisEmbarque: string[]
-  transporte: string
-  quantidadeTransporte: number
+  transportes?: TransporteFrota[]
+  // Legacy fields (optional so old records don't break TS)
+  transporte?: string
+  quantidadeTransporte?: number
   status: PasseioStatus
   passageirosAlocados: number
   imagem: string
@@ -59,6 +68,7 @@ export interface Passageiro {
   formaPagamento: 'dinheiro' | 'pix' | 'cartao_credito'
   statusAlocacao: 'alocado' | 'nao_alocado'
   numeroPoltrona: number | null
+  veiculoAlocado?: string // Adicionado para suportar frotas
   desconto?: {
     tipo: 'porcentagem' | 'fixo'
     valor: number

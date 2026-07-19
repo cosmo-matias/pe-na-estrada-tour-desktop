@@ -9,9 +9,10 @@ export const passeiosMock: Passeio[] = [
     horarioSaida: '06:00',
     horarioRetorno: '22:00',
     valor: 120.0,
-    locaisEmbarque: ['Mamanguape - Terminal Rodoviário', 'Rio Tinto - Praça Central', 'Marcação - Posto BR'],
-    transporte: 'Ônibus 50 lugares',
-    quantidadeTransporte: 1,
+    locaisEmbarque: ['Terminal JK', 'Praça da Savassi'],
+    transportes: [
+      { id: 'v1', nome: 'Ônibus Principal', tipo: 'Onibus 50', capacidade: 50 }
+    ],
     status: 'a_realizar',
     passageirosAlocados: 38,
     imagem: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80',
@@ -24,9 +25,11 @@ export const passeiosMock: Passeio[] = [
     horarioSaida: '07:30',
     horarioRetorno: '19:00',
     valor: 85.0,
-    locaisEmbarque: ['Mamanguape - Colégio Estadual', 'Capim - Praça da Igreja'],
-    transporte: 'Van 14 lugares',
-    quantidadeTransporte: 2,
+    locaisEmbarque: ['Rodoviária', 'Estação Pampulha'],
+    transportes: [
+      { id: 'v1', nome: 'Van 1', tipo: 'Van 14', capacidade: 14 },
+      { id: 'v2', nome: 'Van 2', tipo: 'Van 14', capacidade: 14 }
+    ],
     status: 'realizado',
     passageirosAlocados: 26,
     imagem: 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&q=80',

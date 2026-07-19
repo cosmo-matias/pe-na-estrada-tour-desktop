@@ -29,6 +29,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
   const [selecionandoPassageiro, setSelecionandoPassageiro] = useState(false)
   const [passageiros, setPassageiros] = useState<Passageiro[]>([])
   const [abaAtiva, setAbaAtiva] = useState<'mapa' | 'lista'>('mapa')
+  const [veiculoSelecionado, setVeiculoSelecionado] = useState<string | null>(null)
 
   // Estado do Sub-modal Financeiro
   const [paxFinanceiro, setPaxFinanceiro] = useState<Passageiro | null>(null)
@@ -58,18 +59,35 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     return () => unsub()
   }, [passeio, paxFinanceiro?.id])
 
-  // Inicializa os assentos quando os passageiros mudam
+  // Define veículo inicial se houver frota
+  useEffect(() => {
+    if (!passeio) return
+    if (!veiculoSelecionado && passeio.transportes && passeio.transportes.length > 0) {
+      setVeiculoSelecionado(passeio.transportes[0].id)
+    }
+  }, [passeio, veiculoSelecionado])
+
+  // Inicializa os assentos quando os passageiros ou o veiculoSelecionado mudam
   useEffect(() => {
     if (!passeio) return
 
-    const tipo = detectarTipo(passeio.transporte)
+    const veiculo = passeio.transportes?.find(v => v.id === veiculoSelecionado)
+    const tipoString = veiculo ? veiculo.tipo : (passeio.transporte || 'Onibus 40')
+    const tipo = detectarTipo(tipoString)
+
     const base = gerarAssentos(tipo, [])
     const comOcupados: Assento[] = base.map((a) => {
-      const pax = passageiros.find((p) => String(p.numeroPoltrona) === String(a.numero))
+      const pax = passageiros.find((p) => {
+        const mesmoAssento = String(p.numeroPoltrona) === String(a.numero)
+        // Se houver veiculoSelecionado, o passageiro também precisa bater com o veículo
+        // (A menos que estejamos no modo legado sem veiculoSelecionado)
+        const mesmoVeiculo = veiculoSelecionado ? p.veiculoAlocado === veiculoSelecionado : true
+        return mesmoAssento && mesmoVeiculo
+      })
       return pax ? { ...a, ocupado: true, passageiroId: pax.id } : a
     })
     setAssentos(comOcupados)
-  }, [passeio, passageiros])
+  }, [passeio, passageiros, veiculoSelecionado])
 
   // Carrega transação quando abre modal financeiro
   useEffect(() => {
@@ -89,7 +107,9 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
 
   if (!aberto || !passeio) return null
 
-  const tipo = detectarTipo(passeio.transporte)
+  const veiculo = passeio.transportes?.find(v => v.id === veiculoSelecionado)
+  const tipoString = veiculo ? veiculo.tipo : (passeio.transporte || 'Onibus 40')
+  const tipo = detectarTipo(tipoString)
   const total = assentos.length
   const livres = assentos.filter((a) => !a.ocupado).length
 
@@ -235,7 +255,8 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
   async function handleAlocarPassageiro(paxId: string) {
     try {
       await updateDoc(doc(db, 'passageiros', paxId), {
-        numeroPoltrona: assentoSelecionado
+        numeroPoltrona: assentoSelecionado,
+        veiculoAlocado: veiculoSelecionado
       })
       setSelecionandoPassageiro(false)
       setAssentoSelecionado(null)
@@ -409,6 +430,29 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
 
           {/* ── COLUNA ESQUERDA: Mapa de Assentos ── */}
           <div className="flex flex-col w-[55%] border-r border-brand-secondary/20 overflow-y-auto p-5 gap-4 flex-shrink-0">
+            {/* Abas de Frota */}
+            {passeio.transportes && passeio.transportes.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 border-b border-brand-secondary/20">
+                {passeio.transportes.map(v => (
+                  <button
+                    key={v.id}
+                    onClick={() => {
+                      setVeiculoSelecionado(v.id)
+                      setAssentoSelecionado(null)
+                      setSelecionandoPassageiro(false)
+                    }}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-colors ${
+                      veiculoSelecionado === v.id
+                        ? 'bg-brand-primary text-white'
+                        : 'bg-brand-light text-brand-dark hover:bg-brand-secondary/20'
+                    }`}
+                  >
+                    {v.nome}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center justify-between relative">
               <h3 className="text-brand-dark font-bold text-sm flex items-center gap-2"><span>🚌</span> Mapa de Assentos — {tipo}</h3>
               {assentoSelecionado && !selecionandoPassageiro && (
@@ -480,6 +524,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                     <div className="text-center py-10 text-brand-dark/40 text-sm">Nenhum passageiro.</div>
                   ) : (
                     [...passageiros]
+                      .filter(p => !veiculoSelecionado || p.veiculoAlocado === veiculoSelecionado || (!p.veiculoAlocado && !p.numeroPoltrona))
                       .sort((a, b) => Number(a.numeroPoltrona ?? 0) - Number(b.numeroPoltrona ?? 0))
                       .map((pax) => (
                         <div key={pax.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-brand-secondary/20 hover:border-brand-primary/30">
