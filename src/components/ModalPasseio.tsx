@@ -19,10 +19,10 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
     horarioRetorno: '',
     valorFormatado: '',
     locaisEmbarque: '',
-    imagem: ''
+    imagem: '',
+    transporte: 'Onibus 50' as TipoTransporte,
+    quantidadeTransporte: 1
   })
-  
-  const [frota, setFrota] = useState<TransporteFrota[]>([])
 
   useEffect(() => {
     if (passeioEdicao) {
@@ -34,9 +34,10 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         horarioRetorno: passeioEdicao.horarioRetorno,
         valorFormatado: passeioEdicao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         locaisEmbarque: passeioEdicao.locaisEmbarque.join(', '),
-        imagem: passeioEdicao.imagem || ''
+        imagem: passeioEdicao.imagem || '',
+        transporte: passeioEdicao.transportes?.[0]?.tipo || (passeioEdicao.transporte as TipoTransporte) || 'Onibus 50',
+        quantidadeTransporte: passeioEdicao.transportes?.length || passeioEdicao.quantidadeTransporte || 1
       })
-      setFrota(passeioEdicao.transportes || [])
     } else {
       setFormData({
         destino: '',
@@ -46,9 +47,10 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         horarioRetorno: '',
         valorFormatado: '',
         locaisEmbarque: '',
-        imagem: ''
+        imagem: '',
+        transporte: 'Onibus 50',
+        quantidadeTransporte: 1
       })
-      setFrota([{ id: Date.now().toString(), nome: 'Ônibus Principal', tipo: 'Onibus 50', capacidade: 50 }])
     }
   }, [passeioEdicao, aberto])
 
@@ -68,6 +70,19 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
     e.preventDefault()
     setLoading(true)
 
+    const transportes: TransporteFrota[] = Array.from({ length: formData.quantidadeTransporte }).map((_, index) => {
+      let capacidade = 50
+      if (formData.transporte === 'Onibus 40') capacidade = 40
+      if (formData.transporte === 'Van 14') capacidade = 14
+      if (formData.transporte === 'Van 12') capacidade = 12
+      return {
+        id: Date.now().toString() + index,
+        nome: `Veículo ${index + 1}`,
+        tipo: formData.transporte as TipoTransporte,
+        capacidade
+      }
+    })
+
     const payload = {
       destino: formData.destino,
       local: formData.local,
@@ -76,8 +91,10 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       horarioRetorno: formData.horarioRetorno,
       valor: Number(formData.valorFormatado.replace(/\./g, '').replace(',', '.')),
       locaisEmbarque: formData.locaisEmbarque.split(',').map(s => s.trim()).filter(Boolean),
-      transportes: frota,
-      capacidade: frota.reduce((acc, v) => acc + v.capacidade, 0),
+      transportes,
+      capacidade: transportes.reduce((acc, v) => acc + v.capacidade, 0),
+      transporte: formData.transporte,
+      quantidadeTransporte: formData.quantidadeTransporte,
       imagem: formData.imagem,
       status: passeioEdicao ? passeioEdicao.status : 'a_realizar',
       passageirosAlocados: passeioEdicao ? passeioEdicao.passageirosAlocados : 0
@@ -159,82 +176,19 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
             <input type="text" required value={formData.locaisEmbarque} onChange={e => setFormData({ ...formData, locaisEmbarque: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" placeholder="Ex: Posto Ipiranga, Rodoviária, Praça Matriz" />
           </div>
 
-          {/* ── Frota do Passeio ── */}
-          <div className="pt-4 border-t border-brand-secondary/20">
-            <div className="flex items-center justify-between mb-4">
-              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60">Frota do Passeio</label>
-              <button
-                type="button"
-                onClick={() => {
-                  setFrota(prev => [
-                    ...prev,
-                    { id: Date.now().toString(), nome: `Veículo ${prev.length + 1}`, tipo: 'Onibus 50', capacidade: 50 }
-                  ])
-                }}
-                className="text-xs bg-brand-primary/10 text-brand-primary px-3 py-1.5 rounded-lg font-bold hover:bg-brand-primary/20 transition-colors"
-              >
-                + Adicionar Veículo
-              </button>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Transporte</label>
+              <select value={formData.transporte} onChange={e => setFormData({ ...formData, transporte: e.target.value as TipoTransporte })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm">
+                <option value="Onibus 50">Ônibus (50 lugares)</option>
+                <option value="Onibus 40">Ônibus (40 lugares)</option>
+                <option value="Van 14">Van (14 lugares)</option>
+                <option value="Van 12">Van (12 lugares)</option>
+              </select>
             </div>
-            
-            <div className="space-y-3">
-              {frota.map((veiculo, index) => (
-                <div key={veiculo.id} className="flex gap-3 items-end bg-brand-light/50 p-3 rounded-xl border border-brand-secondary/20">
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark/50 mb-1">Nome/Placa</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={veiculo.nome} 
-                      onChange={e => {
-                        const novaFrota = [...frota]
-                        novaFrota[index].nome = e.target.value
-                        setFrota(novaFrota)
-                      }} 
-                      className="w-full px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg focus:border-brand-primary outline-none text-sm" 
-                      placeholder="Ex: Ônibus Principal" 
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark/50 mb-1">Tipo</label>
-                    <select 
-                      value={veiculo.tipo} 
-                      onChange={e => {
-                        const novaFrota = [...frota]
-                        const tipo = e.target.value as TipoTransporte
-                        let capacidade = 50
-                        if (tipo === 'Onibus 40') capacidade = 40
-                        if (tipo === 'Van 14') capacidade = 14
-                        if (tipo === 'Van 12') capacidade = 12
-                        
-                        novaFrota[index].tipo = tipo
-                        novaFrota[index].capacidade = capacidade
-                        setFrota(novaFrota)
-                      }} 
-                      className="w-full px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg focus:border-brand-primary outline-none text-sm"
-                    >
-                      <option value="Onibus 50">Ônibus (50 lugares)</option>
-                      <option value="Onibus 40">Ônibus (40 lugares)</option>
-                      <option value="Van 14">Van (14 lugares)</option>
-                      <option value="Van 12">Van (12 lugares)</option>
-                    </select>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (frota.length === 1) {
-                        alert('O passeio precisa de pelo menos um veículo.')
-                        return
-                      }
-                      const novaFrota = frota.filter(v => v.id !== veiculo.id)
-                      setFrota(novaFrota)
-                    }}
-                    className="h-[38px] px-3 bg-red-50 text-red-500 rounded-lg font-bold hover:bg-red-100 transition-colors"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              ))}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Quantidade de Veículos</label>
+              <input type="number" required min="1" value={formData.quantidadeTransporte} onChange={e => setFormData({ ...formData, quantidadeTransporte: Number(e.target.value) })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" />
             </div>
           </div>
 

@@ -491,6 +491,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
               )}
             </div>
             <MapaAssentos
+              key={veiculoSelecionado || 'default'}
               tipoTransporte={tipo}
               assentos={assentos}
               onSelecionarAssento={handleSelecionarAssento}
