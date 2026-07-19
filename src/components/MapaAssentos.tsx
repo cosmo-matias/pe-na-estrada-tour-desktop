@@ -34,7 +34,12 @@ function Poltrona({
   selecionado: boolean
   onClick: () => void
 }) {
-  const { numero, ocupado, statusFinanceiro } = assento
+  const { numero, ocupado, statusFinanceiro, passageiroNome } = assento
+
+  const exibirNome = (nomeCompleto: string) => {
+    const partes = nomeCompleto.trim().split(' ')
+    return partes.length > 1 ? `${partes[0]} ${partes[1]}` : partes[0]
+  }
 
   const base = 'relative flex flex-col items-center justify-center w-10 h-11 rounded-t-xl border-2 text-xs font-bold transition-all duration-150 select-none'
 
@@ -50,7 +55,7 @@ function Poltrona({
     <button
       className={estilo}
       onClick={onClick}
-      title={ocupado ? `Assento ${numero} — Ocupado (${statusFinanceiro})` : `Assento ${numero} — Livre`}
+      title={ocupado ? `${passageiroNome ? exibirNome(passageiroNome) : `Assento ${numero}`} — Ocupado (${statusFinanceiro})` : `Assento ${numero} — Livre`}
       id={`assento-${numero}`}
     >
       {/* Encosto visual */}

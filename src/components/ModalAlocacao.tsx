@@ -27,8 +27,9 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
   const [assentos, setAssentos] = useState<Assento[]>([])
   const [assentoSelecionado, setAssentoSelecionado] = useState<string | number | null>(null)
   const [selecionandoPassageiro, setSelecionandoPassageiro] = useState(false)
+  const [passageiroEmTroca, setPassageiroEmTroca] = useState<string | null>(null)
   const [passageiros, setPassageiros] = useState<Passageiro[]>([])
-  const [abaAtiva, setAbaAtiva] = useState<'mapa' | 'lista'>('mapa')
+  const [abaAtiva, setAbaAtiva] = useState<'mapa' | 'alocados' | 'lista'>('mapa')
   const [veiculoSelecionado, setVeiculoSelecionado] = useState<string | null>(null)
 
   // Estado do Sub-modal Financeiro
@@ -87,9 +88,9 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
 
     const base = gerarAssentos(tipo, [])
     
-    // Filtro de passageiros alocados no veículo atual (inclui fallback para passageiros legados sem veiculoAlocado)
+    // Filtro estrito de passageiros alocados no veículo atual (deve bater as duas chaves)
     const alocadosVeiculoAtual = passageiros.filter(p => 
-      p.numeroPoltrona && (!veiculoSelecionado || p.veiculoAlocado === veiculoSelecionado || !p.veiculoAlocado)
+      p.numeroPoltrona && p.veiculoAlocado === veiculoSelecionado
     )
 
     const comOcupados: Assento[] = base.map((a) => {
@@ -97,7 +98,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
       if (pax) {
         const tx = transacoes.find(t => t.passageiroId === pax.id)
         const statusFinanceiro = tx?.status === 'efetivada' ? 'pago' : 'pendente'
-        return { ...a, ocupado: true, passageiroId: pax.id, statusFinanceiro }
+        return { ...a, ocupado: true, passageiroId: pax.id, passageiroNome: pax.nomeCompleto, statusFinanceiro }
       }
       return a
     })
@@ -128,8 +129,11 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
   const total = assentos.length
   const livres = assentos.filter((a) => !a.ocupado).length
   
-  // Lista de passageiros sem assento (Desalocados)
-  const desalocados = passageiros.filter(p => !p.numeroPoltrona)
+  // Lista de passageiros sem assento (Desalocados) ou sem veículo alocado
+  const desalocados = passageiros.filter(p => !p.numeroPoltrona || !p.veiculoAlocado)
+  
+  // Lista de passageiros alocados (somente no veículo selecionado)
+  const passageirosAlocadosTodos = passageiros.filter(p => p.numeroPoltrona && p.veiculoAlocado === veiculoSelecionado)
 
   // ── Helpers Financeiros ─────────────────────────────────────────────
   const calcularSaldoDevedor = () => {
@@ -152,9 +156,25 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
 
   // ── Handlers ──────────────────────────────────────────────────────
   function handleSelecionarAssento(assento: Assento) {
+    if (passageiroEmTroca) {
+      if (!assento.ocupado) {
+        if(confirm('Mover o passageiro para este assento?')) {
+          handleAlocarPassageiro(passageiroEmTroca, assento.numero)
+        }
+      } else {
+        alert("Escolha um assento livre para realizar a troca.")
+      }
+      return
+    }
+
     setAssentoSelecionado((prev) =>
       prev === assento.numero ? null : assento.numero
     )
+  }
+
+  function handleIniciarTroca(paxId: string) {
+    setPassageiroEmTroca(paxId)
+    setAssentoSelecionado(null)
   }
 
   async function handleSalvarDesconto() {
@@ -221,46 +241,203 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     }
   }
 
-  function handleGerarResumoPDF() {
+  async function handleGerarResumoPDF() {
     if (!passeio) return
     const doc = new jsPDF()
-    const totalVagas = assentos.length
-    const vagasLivres = assentos.filter(a => !a.ocupado).length
-    const vagasOcupadas = totalVagas - vagasLivres
 
+    let currentY = 10
+    try {
+      const img = new Image()
+      img.src = '/logo.png'
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+      })
+      const pageWidth = doc.internal.pageSize.width
+      doc.addImage(img, 'PNG', pageWidth / 2 - 15, currentY, 30, 30)
+      currentY += 40
+    } catch (e) {
+      currentY = 20
+    }
+
+    const pageWidth = doc.internal.pageSize.width
     doc.setFontSize(20)
-    doc.text('Resumo do Passeio', 14, 22)
+    doc.text('Resumo do Passeio', pageWidth / 2, currentY, { align: 'center' })
+    currentY += 10
     doc.setFontSize(12)
-    doc.text(`Destino: ${passeio.destino}`, 14, 32)
-    doc.text(`Data: ${passeio.data.split('-').reverse().join('/')}`, 14, 40)
-    doc.text(`Total de Vagas: ${totalVagas}`, 14, 48)
-    doc.text(`Vagas Livres: ${vagasLivres}`, 14, 56)
-    doc.text(`Vagas Ocupadas: ${vagasOcupadas}`, 14, 64)
+    doc.text(`Destino: ${passeio.destino}`, pageWidth / 2, currentY, { align: 'center' })
+    currentY += 6
+    doc.text(`Data: ${passeio.data.split('-').reverse().join('/')}`, pageWidth / 2, currentY, { align: 'center' })
+    currentY += 6
+    doc.text(`Agente Responsável: ${passeio.agenteResponsavel || 'Não informado'}`, pageWidth / 2, currentY, { align: 'center' })
+    currentY += 15
+
+    const bodyData: any[][] = []
+    
+    if (passeio.transportes && passeio.transportes.length > 0) {
+      passeio.transportes.forEach((veic) => {
+        const paxsVeiculo = passageiros
+          .filter(p => p.veiculoAlocado === veic.id && p.numeroPoltrona != null)
+          .sort((a, b) => (Number(a.numeroPoltrona) || 0) - (Number(b.numeroPoltrona) || 0))
+          
+        paxsVeiculo.forEach(pax => {
+           const tx = transacoes.find(t => t.passageiroId === pax.id)
+           const statusFin = tx?.status === 'efetivada' ? 'Pago' : (tx?.status === 'parcial' ? 'Parcial' : 'Pendente')
+           bodyData.push([
+             pax.numeroPoltrona || '-',
+             pax.nomeCompleto,
+             veic.nome || '-',
+             statusFin
+           ])
+        })
+      })
+    } else {
+      const paxsAlocados = passageiros
+        .filter(p => p.numeroPoltrona != null)
+        .sort((a, b) => (Number(a.numeroPoltrona) || 0) - (Number(b.numeroPoltrona) || 0))
+        
+      paxsAlocados.forEach(pax => {
+         const tx = transacoes.find(t => t.passageiroId === pax.id)
+         const statusFin = tx?.status === 'efetivada' ? 'Pago' : (tx?.status === 'parcial' ? 'Parcial' : 'Pendente')
+         bodyData.push([
+           pax.numeroPoltrona || '-',
+           pax.nomeCompleto,
+           'Único',
+           statusFin
+         ])
+      })
+    }
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Nome do Passageiro', 'Poltrona', 'Veículo', 'Status Financeiro']],
+      body: bodyData,
+    })
+
     doc.save(`Resumo_${passeio.destino.replace(/\s+/g, '_')}.pdf`)
   }
 
-  function handleListaDetalhadaPDF() {
+  function calcularIdade(dataNascimento: string) {
+    if (!dataNascimento) return '-'
+    const nascimento = new Date(dataNascimento)
+    const hoje = new Date()
+    let idade = hoje.getFullYear() - nascimento.getFullYear()
+    const m = hoje.getMonth() - nascimento.getMonth()
+    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
+      idade--
+    }
+    return isNaN(idade) ? '-' : idade.toString()
+  }
+
+  async function handleListaDetalhadaPDF() {
     if (!passeio) return
     const doc = new jsPDF()
-    doc.setFontSize(16)
-    doc.text(`Lista de Passageiros - ${passeio.destino}`, 14, 20)
     
-    const paxsAlocados = passageiros
-      .filter(p => p.numeroPoltrona != null)
-      .sort((a, b) => Number(a.numeroPoltrona) - Number(b.numeroPoltrona))
+    let currentY = 10
+    try {
+      const img = new Image()
+      img.src = '/logo.png'
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+      })
+      const pageWidth = doc.internal.pageSize.width
+      doc.addImage(img, 'PNG', pageWidth / 2 - 15, currentY, 30, 30)
+      currentY += 40
+    } catch (e) {
+      currentY = 20
+    }
 
-    const tableData = paxsAlocados.map(p => [
-      p.numeroPoltrona,
-      p.nomeCompleto,
-      p.whatsapp,
-      p.pontoEmbarque || '-'
-    ])
+    const pageWidth = doc.internal.pageSize.width
+    doc.setFontSize(20)
+    doc.text('Lista de Passageiros', pageWidth / 2, currentY, { align: 'center' })
+    currentY += 10
+    doc.setFontSize(12)
+    doc.text(`Destino: ${passeio.destino}`, pageWidth / 2, currentY, { align: 'center' })
+    currentY += 6
+    doc.text(`Data: ${passeio.data.split('-').reverse().join('/')}`, pageWidth / 2, currentY, { align: 'center' })
+    currentY += 6
+    doc.text(`Agente Responsável: ${passeio.agenteResponsavel || 'Não informado'}`, pageWidth / 2, currentY, { align: 'center' })
+    currentY += 15
 
-    autoTable(doc, {
-      startY: 30,
-      head: [['Assento', 'Nome Completo', 'WhatsApp', 'Embarque']],
-      body: tableData,
-    })
+    if (passeio.transportes && passeio.transportes.length > 0) {
+      passeio.transportes.forEach((veic, index) => {
+        const paxsDoVeiculo = passageiros
+          .filter(p => p.veiculoAlocado === veic.id && p.numeroPoltrona != null)
+          .sort((a, b) => (Number(a.numeroPoltrona) || 0) - (Number(b.numeroPoltrona) || 0))
+
+        if (index > 0) {
+           doc.addPage()
+           currentY = 20
+        }
+        
+        doc.setFontSize(14)
+        doc.text(`Veículo: ${veic.nome} (${veic.tipo})`, 14, currentY)
+        currentY += 8
+
+        const tableData = paxsDoVeiculo.map(p => {
+          const tx = transacoes.find(t => t.passageiroId === p.id)
+          const statusFin = tx?.status === 'efetivada' ? 'Pago' : (tx?.status === 'parcial' ? 'Parcial' : 'Pendente')
+          return [
+            p.numeroPoltrona || '-',
+            p.nomeCompleto,
+            calcularIdade(p.dataNascimento),
+            p.whatsapp,
+            p.pontoEmbarque || '-',
+            statusFin
+          ]
+        })
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Poltrona', 'Nome', 'Idade', 'WhatsApp', 'Embarque', 'Status']],
+          body: tableData,
+          styles: { cellPadding: 2 },
+          columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 'auto' },
+            2: { cellWidth: 15 },
+            3: { cellWidth: 35 },
+            4: { cellWidth: 'auto' },
+            5: { cellWidth: 30 }
+          }
+        })
+        
+        currentY = (doc as any).lastAutoTable.finalY + 15
+      })
+    } else {
+      const paxsAlocados = passageiros
+        .filter(p => p.numeroPoltrona != null)
+        .sort((a, b) => (Number(a.numeroPoltrona) || 0) - (Number(b.numeroPoltrona) || 0))
+
+      const tableData = paxsAlocados.map(p => {
+        const tx = transacoes.find(t => t.passageiroId === p.id)
+        const statusFin = tx?.status === 'efetivada' ? 'Pago' : (tx?.status === 'parcial' ? 'Parcial' : 'Pendente')
+        return [
+          p.numeroPoltrona || '-',
+          p.nomeCompleto,
+          calcularIdade(p.dataNascimento),
+          p.whatsapp,
+          p.pontoEmbarque || '-',
+          statusFin
+        ]
+      })
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Poltrona', 'Nome', 'Idade', 'WhatsApp', 'Embarque', 'Status']],
+        body: tableData,
+        styles: { cellPadding: 2 },
+        columnStyles: {
+          0: { cellWidth: 20 },
+          1: { cellWidth: 'auto' },
+          2: { cellWidth: 15 },
+          3: { cellWidth: 35 },
+          4: { cellWidth: 'auto' },
+          5: { cellWidth: 30 }
+        }
+      })
+    }
 
     doc.save(`Lista_Detalhada_${passeio.destino.replace(/\s+/g, '_')}.pdf`)
   }
@@ -270,19 +447,24 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     setSelecionandoPassageiro(true)
   }
 
-  async function handleAlocarPassageiro(paxId: string) {
+  async function handleAlocarPassageiro(paxId: string, assentoDestino?: string | number) {
+    const destino = assentoDestino ?? assentoSelecionado
+    const pax = passageiros.find(p => p.id === paxId)
+    if (!destino) return
+
     try {
       await updateDoc(doc(db, 'passageiros', paxId), {
-        numeroPoltrona: assentoSelecionado,
+        numeroPoltrona: destino,
         veiculoAlocado: veiculoSelecionado
       })
-      if (passeio) {
+      if (passeio && !pax?.numeroPoltrona) {
         await updateDoc(doc(db, 'passeios', passeio.id), {
           passageirosAlocados: (passeio.passageirosAlocados || 0) + 1
         })
       }
       setSelecionandoPassageiro(false)
       setAssentoSelecionado(null)
+      setPassageiroEmTroca(null)
     } catch (err) {
       console.error(err)
       alert('Erro ao alocar passageiro.')
@@ -308,17 +490,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     }
   }
 
-  async function handleAlternarPagamento(paxId: string) {
-    const tx = transacoes.find(t => t.passageiroId === paxId)
-    if (!tx) return
-    const novoStatus = tx.status === 'efetivada' ? 'pendente' : 'efetivada'
-    const novoValorPago = novoStatus === 'efetivada' ? tx.valorTotal : 0
-    try {
-      await updateDoc(doc(db, 'transacoes', tx.id), { status: novoStatus, valorPago: novoValorPago })
-    } catch (err) {
-      console.error(err)
-    }
-  }
+  // Removido handleAlternarPagamento pois o botão foi substituído
 
   // ── Render ────────────────────────────────────────────────────────
   return (
@@ -495,7 +667,15 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
             )}
 
             <div className="flex items-center justify-between relative">
-              <h3 className="text-brand-dark font-bold text-sm flex items-center gap-2"><span>🚌</span> Mapa de Assentos — {tipo}</h3>
+              <div className="flex items-center gap-4">
+                <h3 className="text-brand-dark font-bold text-sm flex items-center gap-2"><span>🚌</span> Mapa de Assentos — {tipo}</h3>
+                {passageiroEmTroca && (
+                  <div className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse shadow-sm border border-orange-200">
+                    <span>⚠️ MODO DE TROCA</span>
+                    <button onClick={() => setPassageiroEmTroca(null)} className="ml-2 bg-white px-2 rounded border border-orange-200 hover:bg-orange-50 text-orange-800">Cancelar</button>
+                  </div>
+                )}
+              </div>
               {assentoSelecionado && !selecionandoPassageiro && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-brand-dark/60">Assento <strong className="text-brand-primary">{assentoSelecionado}</strong></span>
@@ -512,7 +692,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                          </div>
                          <div className="flex flex-col gap-2">
                            <button onClick={() => setPaxFinanceiro(passageiros.find(p => p.id === assentos.find(a => a.numero === assentoSelecionado)?.passageiroId)!)} className="px-3 py-2 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-200 transition-colors">💰 Painel Financeiro</button>
-                           <button onClick={() => handleAlternarPagamento(assentos.find(a => a.numero === assentoSelecionado)!.passageiroId!)} className="px-3 py-2 bg-brand-secondary/10 text-brand-dark text-xs font-bold rounded-lg hover:bg-brand-secondary/20 transition-colors">🔄 Alternar Pagamento</button>
+                           <button onClick={() => handleIniciarTroca(assentos.find(a => a.numero === assentoSelecionado)!.passageiroId!)} className="px-3 py-2 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-200 transition-colors">🔄 Trocar de Poltrona</button>
                            <button onClick={() => handleDesalocarPassageiro(assentos.find(a => a.numero === assentoSelecionado)!.passageiroId!)} className="px-3 py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors">✖ Desalocar Passageiro</button>
                          </div>
                        </div>
@@ -529,7 +709,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                      <button onClick={() => setSelecionandoPassageiro(false)} className="text-brand-dark/50 hover:text-brand-dark text-lg leading-none">✕</button>
                    </div>
                    <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-white">
-                      {passageiros.filter(p => !p.numeroPoltrona).map(pax => (
+                      {desalocados.map(pax => (
                          <div key={pax.id} className="flex justify-between items-center p-2 border rounded-lg hover:border-brand-primary/50 cursor-pointer bg-brand-light/30" onClick={() => handleAlocarPassageiro(pax.id)}>
                             <div className="min-w-0 flex-1">
                                <p className="font-bold text-xs truncate text-brand-dark">{pax.nomeCompleto}</p>
@@ -538,9 +718,9 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                             <span className="text-[10px] bg-brand-primary text-white px-2 py-1 rounded font-bold ml-2">Selecionar</span>
                          </div>
                       ))}
-                      {passageiros.filter(p => !p.numeroPoltrona).length === 0 && (
+                      {desalocados.length === 0 && (
                          <div className="text-center py-6 text-brand-dark/40 text-xs">
-                            Nenhum passageiro sem assento.
+                            Nenhum passageiro desalocado.
                          </div>
                       )}
                    </div>
@@ -564,13 +744,17 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
             </div>
 
             <div className="flex border-b border-brand-secondary/20 flex-shrink-0">
-              {(['mapa', 'lista'] as const).map((aba) => (
+              {(['mapa', 'alocados', 'lista'] as const).map((aba) => (
                 <button
                   key={aba}
                   onClick={() => setAbaAtiva(aba)}
-                  className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${abaAtiva === aba ? 'border-b-2 border-brand-primary text-brand-primary bg-brand-primary/5' : 'text-brand-dark/50 hover:text-brand-dark'}`}
+                  className={`flex-1 py-2.5 text-[10px] font-semibold transition-colors ${abaAtiva === aba ? 'border-b-2 border-brand-primary text-brand-primary bg-brand-primary/5' : 'text-brand-dark/50 hover:text-brand-dark'}`}
                 >
-                  {aba === 'mapa' ? `👥 Desalocados (${desalocados.length})` : '📊 Detalhes do Passeio'}
+                  {aba === 'mapa' 
+                    ? `👥 Desalocados (${desalocados.length})` 
+                    : aba === 'alocados' 
+                      ? `✅ Alocados (${passageirosAlocadosTodos.length})` 
+                      : '📊 Detalhes'}
                 </button>
               ))}
             </div>
@@ -587,7 +771,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                           <div className="w-9 h-9 rounded-full bg-brand-secondary/10 flex items-center justify-center text-brand-dark font-bold text-sm shadow-sm">{'—'}</div>
                           <div className="flex-1 min-w-0">
                             <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
-                            <p className="text-brand-dark/50 text-xs">{pax.whatsapp}</p>
+                            <p className="text-brand-dark/50 text-[10px]">{pax.whatsapp}</p>
                           </div>
                           <button 
                             onClick={() => setPaxFinanceiro(pax)}
@@ -597,6 +781,43 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                           </button>
                         </div>
                       ))
+                  )}
+                </div>
+              )}
+
+              {abaAtiva === 'alocados' && (
+                <div className="space-y-2">
+                  {passageirosAlocadosTodos.length === 0 ? (
+                    <div className="text-center py-10 text-brand-dark/40 text-sm">Nenhum passageiro alocado.</div>
+                  ) : (
+                    passageirosAlocadosTodos
+                      .map((pax) => {
+                        const vNome = passeio.transportes?.find(v => v.id === pax.veiculoAlocado)?.nome || 'Veículo'
+                        return (
+                          <div key={pax.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-brand-secondary/20 hover:border-brand-primary/30">
+                            <div className="w-9 h-9 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-sm shadow-sm">{pax.numeroPoltrona}</div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
+                              <p className="text-brand-dark/50 text-[10px] truncate">{pax.whatsapp}</p>
+                              <span className="inline-block mt-1 px-2 py-0.5 bg-brand-light text-brand-dark/70 text-[10px] font-bold rounded">Assento {pax.numeroPoltrona} • {vNome}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <button 
+                                onClick={() => setPaxFinanceiro(pax)}
+                                className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded hover:bg-green-200 transition-colors text-center"
+                              >
+                                💰
+                              </button>
+                              <button 
+                                onClick={() => handleDesalocarPassageiro(pax.id)}
+                                className="px-2 py-1 bg-red-100 text-red-700 text-[10px] font-bold uppercase rounded hover:bg-red-200 transition-colors text-center"
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })
                   )}
                 </div>
               )}

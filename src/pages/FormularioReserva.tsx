@@ -171,6 +171,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
           formaPagamento: pax.formaPagamento,
           statusAlocacao: 'nao_alocado',
           numeroPoltrona: null,
+          veiculoAlocado: null,
           historicoPagamentos: [],
         })
 

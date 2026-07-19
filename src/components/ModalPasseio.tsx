@@ -19,10 +19,12 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
     horarioRetorno: '',
     valorFormatado: '',
     locaisEmbarque: [] as string[],
-    imagem: ''
+    imagem: '',
+    agenteResponsavel: 'Ambos' as 'Cosmo' | 'Noêmia' | 'Ambos'
   })
   
   const [linhasFrota, setLinhasFrota] = useState<{ tipo: TipoTransporte, quantidade: number }[]>([{ tipo: 'Onibus 50', quantidade: 1 }])
+  const [despesas, setDespesas] = useState<{ descricao: string; valor: string }[]>([])
 
   useEffect(() => {
     if (passeioEdicao) {
@@ -34,7 +36,8 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         horarioRetorno: passeioEdicao.horarioRetorno,
         valorFormatado: passeioEdicao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         locaisEmbarque: passeioEdicao.locaisEmbarque || [],
-        imagem: passeioEdicao.imagem || ''
+        imagem: passeioEdicao.imagem || '',
+        agenteResponsavel: passeioEdicao.agenteResponsavel || 'Ambos'
       })
       if (passeioEdicao.transportes && passeioEdicao.transportes.length > 0) {
         const contagem: Record<string, number> = {}
@@ -47,6 +50,14 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       } else {
         setLinhasFrota([{ tipo: 'Onibus 50', quantidade: 1 }])
       }
+      if (passeioEdicao.despesas) {
+        setDespesas(passeioEdicao.despesas.map(d => ({
+          descricao: d.descricao,
+          valor: d.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        })))
+      } else {
+        setDespesas([])
+      }
     } else {
       setFormData({
         destino: '',
@@ -56,9 +67,11 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         horarioRetorno: '',
         valorFormatado: '',
         locaisEmbarque: [],
-        imagem: ''
+        imagem: '',
+        agenteResponsavel: 'Ambos'
       })
       setLinhasFrota([{ tipo: 'Onibus 50', quantidade: 1 }])
+      setDespesas([])
     }
   }, [passeioEdicao, aberto])
 
@@ -108,6 +121,11 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       transportes: frotaFinal,
       capacidade: frotaFinal.reduce((acc, v) => acc + v.capacidade, 0),
       imagem: formData.imagem,
+      agenteResponsavel: formData.agenteResponsavel,
+      despesas: despesas.map(d => ({
+        descricao: d.descricao,
+        valor: Number(d.valor.replace(/\./g, '').replace(',', '.')) || 0
+      })),
       status: passeioEdicao ? passeioEdicao.status : 'a_realizar',
       passageirosAlocados: passeioEdicao ? passeioEdicao.passageirosAlocados : 0
     }
@@ -116,7 +134,33 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       if (passeioEdicao) {
         await updateDoc(doc(db, 'passeios', passeioEdicao.id), payload)
       } else {
-        await addDoc(collection(db, 'passeios'), payload)
+        const docRef = await addDoc(collection(db, 'passeios'), payload)
+        
+        // Criar Agentes Fictícios
+        const agentesParaCriar = []
+        if (formData.agenteResponsavel === 'Cosmo' || formData.agenteResponsavel === 'Ambos') {
+          agentesParaCriar.push('Agente Cosmo')
+        }
+        if (formData.agenteResponsavel === 'Noêmia' || formData.agenteResponsavel === 'Ambos') {
+          agentesParaCriar.push('Agente Noêmia')
+        }
+
+        for (const nomeAgente of agentesParaCriar) {
+          await addDoc(collection(db, 'passageiros'), {
+            passeioId: docRef.id,
+            nomeCompleto: nomeAgente,
+            dataNascimento: '',
+            cpf: '',
+            whatsapp: '',
+            contatoEmergencia: '',
+            endereco: { logradouro: '', bairro: '', cidade: '', estado: '' },
+            pontoEmbarque: '',
+            formaPagamento: 'pix',
+            statusAlocacao: 'nao_alocado',
+            numeroPoltrona: null,
+            veiculoAlocado: null
+          })
+        }
       }
       onFechar()
     } catch (error) {
@@ -181,6 +225,19 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
               <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">URL da Imagem</label>
               <input type="url" value={formData.imagem} onChange={e => setFormData({ ...formData, imagem: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" placeholder="https://..." />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Agente Responsável</label>
+            <select 
+              value={formData.agenteResponsavel} 
+              onChange={e => setFormData({ ...formData, agenteResponsavel: e.target.value as 'Cosmo' | 'Noêmia' | 'Ambos' })}
+              className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm"
+            >
+              <option value="Cosmo">Cosmo</option>
+              <option value="Noêmia">Noêmia</option>
+              <option value="Ambos">Ambos</option>
+            </select>
           </div>
 
           <div>
@@ -273,6 +330,79 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
               className="mt-3 text-xs bg-brand-primary/10 text-brand-primary px-3 py-2 rounded-lg font-bold hover:bg-brand-primary/20 transition-colors w-full"
             >
               + Adicionar Outro Transporte
+            </button>
+          </div>
+
+          <div className="pt-4 border-t border-brand-secondary/20">
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60">Custos Variáveis (Despesas)</label>
+            </div>
+            
+            <div className="space-y-3">
+              {despesas.map((despesa, index) => (
+                <div key={index} className="flex gap-3 items-end bg-brand-light/50 p-3 rounded-xl border border-brand-secondary/20">
+                  <div className="flex-[2]">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark/50 mb-1">Descrição</label>
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="Ex: Combustível"
+                      value={despesa.descricao} 
+                      onChange={e => {
+                        const novas = [...despesas]
+                        novas[index].descricao = e.target.value
+                        setDespesas(novas)
+                      }} 
+                      className="w-full px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg focus:border-brand-primary outline-none text-sm" 
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-brand-dark/50 mb-1">Valor (R$)</label>
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="0,00"
+                      value={despesa.valor} 
+                      onChange={e => {
+                        let value = e.target.value.replace(/\D/g, '')
+                        if (value === '') {
+                          const novas = [...despesas]
+                          novas[index].valor = ''
+                          setDespesas(novas)
+                          return
+                        }
+                        const floatValue = parseInt(value, 10) / 100
+                        const formated = floatValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        
+                        const novas = [...despesas]
+                        novas[index].valor = formated
+                        setDespesas(novas)
+                      }} 
+                      className="w-full px-3 py-2 bg-white border border-brand-secondary/30 rounded-lg focus:border-brand-primary outline-none text-sm" 
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const novas = despesas.filter((_, i) => i !== index)
+                      setDespesas(novas)
+                    }}
+                    className="h-[38px] px-3 bg-red-50 text-red-500 rounded-lg font-bold hover:bg-red-100 transition-colors"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => {
+                setDespesas(prev => [...prev, { descricao: '', valor: '' }])
+              }}
+              className="mt-3 text-xs bg-brand-primary/10 text-brand-primary px-3 py-2 rounded-lg font-bold hover:bg-brand-primary/20 transition-colors w-full"
+            >
+              + Adicionar Despesa
             </button>
           </div>
 

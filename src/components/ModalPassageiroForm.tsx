@@ -73,7 +73,8 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
       passeioId: formData.passeioId,
       formaPagamento: passageiroEdicao ? passageiroEdicao.formaPagamento : 'dinheiro',
       statusAlocacao: passageiroEdicao ? passageiroEdicao.statusAlocacao : 'nao_alocado',
-      numeroPoltrona: passageiroEdicao ? passageiroEdicao.numeroPoltrona : null
+      numeroPoltrona: passageiroEdicao ? passageiroEdicao.numeroPoltrona : null,
+      veiculoAlocado: passageiroEdicao && passageiroEdicao.veiculoAlocado !== undefined ? passageiroEdicao.veiculoAlocado : null
     }
 
     try {

@@ -4,19 +4,30 @@ import { db } from '../config/firebase'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import type { Transacao } from '../types'
+import type { Transacao, Passeio } from '../types'
 
 export function Financeiro() {
   const [transacoes, setTransacoes] = useState<Transacao[]>([])
+  const [passeios, setPasseios] = useState<Passeio[]>([])
   const [dataInicial, setDataInicial] = useState('')
   const [dataFinal, setDataFinal] = useState('')
+  const [abaAtiva, setAbaAtiva] = useState<'geral' | 'receita'>('geral')
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'transacoes'), (snapshot) => {
       const ts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transacao))
       setTransacoes(ts)
     })
-    return () => unsub()
+    
+    const unsubPasseios = onSnapshot(collection(db, 'passeios'), (snapshot) => {
+      const ps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Passeio))
+      setPasseios(ps)
+    })
+
+    return () => {
+      unsub()
+      unsubPasseios()
+    }
   }, [])
 
   // Filtro
@@ -107,6 +118,26 @@ export function Financeiro() {
 
   const formatarValor = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
 
+  // Helpers para o Dashboard de Receita
+  const calcularCapacidade = (passeio: Passeio) => {
+    if (passeio.transportes && passeio.transportes.length > 0) {
+      return passeio.transportes.reduce((acc, t) => acc + t.capacidade, 0)
+    }
+    const t = (passeio.transporte || 'Onibus 40').toLowerCase()
+    let cap = 40
+    if (t.includes('van') && t.includes('14')) cap = 14
+    else if (t.includes('van') && t.includes('12')) cap = 12
+    else if (t.includes('50')) cap = 50
+    return cap * (passeio.quantidadeTransporte || 1)
+  }
+
+  // Ordena passeios do mais próximo ao mais distante, ignorando cancelados na tela de receita
+  const passeiosReceita = useMemo(() => {
+    return passeios
+      .filter(p => p.status !== 'cancelado')
+      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
+  }, [passeios])
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -123,8 +154,26 @@ export function Financeiro() {
         </button>
       </div>
 
-      {/* Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* Tabs */}
+      <div className="flex border-b border-brand-secondary/20 gap-4">
+        <button
+          onClick={() => setAbaAtiva('geral')}
+          className={`py-3 px-4 font-bold transition-colors text-sm ${abaAtiva === 'geral' ? 'border-b-2 border-brand-primary text-brand-primary' : 'text-brand-dark/50 hover:text-brand-dark'}`}
+        >
+          Transações Gerais
+        </button>
+        <button
+          onClick={() => setAbaAtiva('receita')}
+          className={`py-3 px-4 font-bold transition-colors text-sm ${abaAtiva === 'receita' ? 'border-b-2 border-brand-primary text-brand-primary' : 'text-brand-dark/50 hover:text-brand-dark'}`}
+        >
+          Receita por Passeio
+        </button>
+      </div>
+
+      {abaAtiva === 'geral' && (
+        <>
+          {/* Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-emerald-500 rounded-2xl p-6 text-white shadow-lg shadow-emerald-500/20">
           <p className="text-emerald-100 text-sm font-semibold mb-1 uppercase tracking-wider">Total Recebido</p>
           <p className="text-3xl font-bold">{formatarValor(totalRecebido)}</p>
@@ -253,6 +302,84 @@ export function Financeiro() {
           </table>
         </div>
       </div>
+        </>
+      )}
+
+      {abaAtiva === 'receita' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {passeiosReceita.map(passeio => {
+            const capacidade = calcularCapacidade(passeio)
+            const alocados = passeio.passageirosAlocados
+            const receita = alocados * passeio.valor
+            const custoTotal = passeio.despesas?.reduce((acc, d) => acc + d.valor, 0) || 0
+            const lucroLiquido = receita - custoTotal
+            const ocupacao = capacidade > 0 ? (alocados / capacidade) * 100 : 0
+            const metaAtingida = ocupacao >= 80
+
+            return (
+              <div key={passeio.id} className="bg-white rounded-2xl p-5 border border-brand-secondary/20 shadow-sm flex flex-col gap-4 hover:shadow-lg transition-shadow">
+                <div>
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-brand-dark text-lg leading-tight">{passeio.destino}</h3>
+                    {metaAtingida && (
+                      <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">Meta Atingida</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-brand-dark/50 font-semibold">{passeio.data.split('-').reverse().join('/')}</p>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="flex-1 bg-brand-light rounded-lg p-3 text-center">
+                    <p className="text-[10px] font-bold text-brand-dark/50 uppercase tracking-wider">Capacidade</p>
+                    <p className="font-bold text-lg text-brand-dark">{capacidade}</p>
+                  </div>
+                  <div className="flex-1 bg-brand-light rounded-lg p-3 text-center">
+                    <p className="text-[10px] font-bold text-brand-dark/50 uppercase tracking-wider">Alocados</p>
+                    <p className="font-bold text-lg text-brand-primary">{alocados}</p>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100/50">
+                  <p className="text-[10px] font-bold text-blue-800/60 uppercase tracking-wider mb-1">Receita Projetada</p>
+                  <p className="font-black text-xl text-blue-700 mb-3">{formatarValor(receita)}</p>
+
+                  <div className="flex justify-between items-center pt-3 border-t border-blue-200/50">
+                    <div>
+                      <p className="text-[10px] font-bold text-blue-800/50 uppercase tracking-wider">Custo Total</p>
+                      <p className="font-bold text-sm text-red-500/80">{formatarValor(custoTotal)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-blue-800/50 uppercase tracking-wider">Margem de Lucro</p>
+                      <p className={`font-black text-lg ${lucroLiquido >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {formatarValor(lucroLiquido)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Progress Bar de Ocupação */}
+                <div>
+                  <div className="flex justify-between text-[10px] font-bold mb-1">
+                    <span className="text-brand-dark/50 uppercase">Ocupação</span>
+                    <span className={metaAtingida ? 'text-emerald-600' : 'text-brand-dark'}>{ocupacao.toFixed(1)}%</span>
+                  </div>
+                  <div className="w-full bg-brand-secondary/20 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${metaAtingida ? 'bg-emerald-500' : 'bg-brand-primary'}`} 
+                      style={{ width: `${Math.min(100, ocupacao)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+          {passeiosReceita.length === 0 && (
+            <div className="col-span-full py-12 text-center text-brand-dark/50">
+              Nenhum passeio agendado para calcular receita.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

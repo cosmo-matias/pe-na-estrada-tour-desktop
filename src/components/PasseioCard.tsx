@@ -7,6 +7,7 @@ interface PasseioCardProps {
   onEditar?: (id: string) => void
   onCancelar?: (id: string) => void
   onExcluir?: (id: string) => void
+  onAtivar?: (id: string) => void
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -27,6 +28,7 @@ export function PasseioCard({
   onEditar,
   onCancelar,
   onExcluir,
+  onAtivar,
 }: PasseioCardProps) {
   const {
     id,
@@ -152,8 +154,16 @@ export function PasseioCard({
             <span>✏️</span> Editar
           </button>
 
-          {/* Regra de negócio: Cancelar (tem passageiros) vs Excluir (vazio) */}
-          {podeCancelar ? (
+          {/* Regra de negócio: Se estiver cancelado, mostra Ativar. Senão, Cancelar (tem passageiros) vs Excluir (vazio) */}
+          {passeio.status === 'cancelado' ? (
+            <button
+              id={`btn-ativar-${id}`}
+              onClick={() => onAtivar?.(id)}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 text-xs font-semibold hover:bg-blue-100 transition-colors"
+            >
+              <span>♻️</span> Ativar
+            </button>
+          ) : podeCancelar ? (
             <button
               id={`btn-cancelar-${id}`}
               onClick={() => onCancelar?.(id)}

@@ -102,6 +102,27 @@ export function Passeios() {
     }
   }
 
+  const handleAtivar = async (id: string) => {
+    const passeio = passeios.find((p) => p.id === id)
+    if (!passeio) return
+
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    
+    // Convertendo a data do passeio (formato YYYY-MM-DD)
+    const [ano, mes, dia] = passeio.data.split('-').map(Number)
+    const dataPasseio = new Date(ano, mes - 1, dia)
+
+    if (dataPasseio < hoje) {
+      alert("Não é possível reativar um passeio com data passada.")
+      return
+    }
+
+    if (window.confirm(`♻️ Reativar o passeio "${passeio.destino}"?`)) {
+      await updateDoc(doc(db, 'passeios', id), { status: 'a_realizar' })
+    }
+  }
+
   const handleExcluir = async (id: string) => {
     const passeio = passeios.find((p) => p.id === id)
     if (!passeio) return
@@ -224,6 +245,7 @@ export function Passeios() {
                       onEditar={handleEditar}
                       onCancelar={handleCancelar}
                       onExcluir={handleExcluir}
+                      onAtivar={handleAtivar}
                     />
                   ))
                 )}

@@ -12,6 +12,7 @@ export interface Assento {
   numero: string | number
   ocupado: boolean
   passageiroId?: string
+  passageiroNome?: string
   statusFinanceiro?: 'pago' | 'pendente'
 }
 
@@ -49,6 +50,8 @@ export interface Passeio {
   passageirosAlocados: number
   imagem: string
   layoutTransporte?: LayoutTransporte
+  despesas?: { descricao: string; valor: number }[]
+  agenteResponsavel?: 'Cosmo' | 'Noêmia' | 'Ambos'
 }
 
 // ── Passageiro ────────────────────────────────────────────────────────
