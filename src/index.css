@@ -11,9 +11,10 @@
 }
 
 html, body {
-  overflow-y: auto !important;
+  margin: 0;
+  padding: 0;
   min-height: 100vh;
-  overscroll-behavior-y: none;
+  background-color: #f8fafc;
 }
 #root {
   min-height: 100vh;
