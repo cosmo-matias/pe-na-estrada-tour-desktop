@@ -34,6 +34,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
   // Estado do Sub-modal Financeiro
   const [paxFinanceiro, setPaxFinanceiro] = useState<Passageiro | null>(null)
   const [transacaoPax, setTransacaoPax] = useState<Transacao | null>(null)
+  const [transacoes, setTransacoes] = useState<Transacao[]>([])
 
   // Campos do Form Financeiro
   const [novoDescontoTipo, setNovoDescontoTipo] = useState<'fixo' | 'porcentagem'>('fixo')
@@ -56,7 +57,16 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
         if (atualizado) setPaxFinanceiro(atualizado)
       }
     })
-    return () => unsub()
+
+    const qTx = query(collection(db, 'transacoes'), where('passeioId', '==', passeio.id))
+    const unsubTx = onSnapshot(qTx, (snapshot) => {
+      setTransacoes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transacao)))
+    })
+
+    return () => {
+      unsub()
+      unsubTx()
+    }
   }, [passeio, paxFinanceiro?.id])
 
   // Define veículo inicial se houver frota
@@ -84,10 +94,15 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
         const mesmoVeiculo = veiculoSelecionado ? p.veiculoAlocado === veiculoSelecionado : true
         return mesmoAssento && mesmoVeiculo
       })
-      return pax ? { ...a, ocupado: true, passageiroId: pax.id } : a
+      if (pax) {
+        const tx = transacoes.find(t => t.passageiroId === pax.id)
+        const statusFinanceiro = tx?.status === 'efetivada' ? 'pago' : 'pendente'
+        return { ...a, ocupado: true, passageiroId: pax.id, statusFinanceiro }
+      }
+      return a
     })
     setAssentos(comOcupados)
-  }, [passeio, passageiros, veiculoSelecionado])
+  }, [passeio, passageiros, transacoes, veiculoSelecionado])
 
   // Carrega transação quando abre modal financeiro
   useEffect(() => {
@@ -258,6 +273,11 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
         numeroPoltrona: assentoSelecionado,
         veiculoAlocado: veiculoSelecionado
       })
+      if (passeio) {
+        await updateDoc(doc(db, 'passeios', passeio.id), {
+          passageirosAlocados: (passeio.passageirosAlocados || 0) + 1
+        })
+      }
       setSelecionandoPassageiro(false)
       setAssentoSelecionado(null)
     } catch (err) {
@@ -270,12 +290,30 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     if(!confirm('Deseja realmente remover este passageiro do assento?')) return
     try {
       await updateDoc(doc(db, 'passageiros', paxId), {
-        numeroPoltrona: null
+        numeroPoltrona: null,
+        veiculoAlocado: null
       })
+      if (passeio) {
+        await updateDoc(doc(db, 'passeios', passeio.id), {
+          passageirosAlocados: Math.max(0, (passeio.passageirosAlocados || 1) - 1)
+        })
+      }
       setAssentoSelecionado(null)
     } catch (err) {
       console.error(err)
       alert('Erro ao desalocar passageiro.')
+    }
+  }
+
+  async function handleAlternarPagamento(paxId: string) {
+    const tx = transacoes.find(t => t.passageiroId === paxId)
+    if (!tx) return
+    const novoStatus = tx.status === 'efetivada' ? 'pendente' : 'efetivada'
+    const novoValorPago = novoStatus === 'efetivada' ? tx.valorTotal : 0
+    try {
+      await updateDoc(doc(db, 'transacoes', tx.id), { status: novoStatus, valorPago: novoValorPago })
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -459,7 +497,22 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-brand-dark/60">Assento <strong className="text-brand-primary">{assentoSelecionado}</strong></span>
                   {assentos.find(a => a.numero === assentoSelecionado)?.ocupado ? (
-                     <button onClick={() => handleDesalocarPassageiro(assentos.find(a => a.numero === assentoSelecionado)!.passageiroId!)} className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600">✖ Desalocar</button>
+                     <div className="absolute right-0 top-10 bg-white shadow-xl border border-brand-secondary/20 rounded-xl z-30 w-72 flex flex-col overflow-hidden">
+                       <div className="flex justify-between items-center p-3 border-b bg-brand-light">
+                         <h4 className="font-bold text-brand-dark text-xs">Assento {assentoSelecionado} Ocupado</h4>
+                         <button onClick={() => setAssentoSelecionado(null)} className="text-brand-dark/50 hover:text-brand-dark leading-none">✕</button>
+                       </div>
+                       <div className="p-3 space-y-3 bg-white">
+                         <div className="text-sm text-brand-dark">
+                           <p className="font-bold">{passageiros.find(p => p.id === assentos.find(a => a.numero === assentoSelecionado)?.passageiroId)?.nomeCompleto}</p>
+                           <p className="text-xs text-brand-dark/60">Status Financeiro: <strong className={assentos.find(a => a.numero === assentoSelecionado)?.statusFinanceiro === 'pago' ? 'text-brand-primary' : 'text-orange-500'}>{assentos.find(a => a.numero === assentoSelecionado)?.statusFinanceiro?.toUpperCase()}</strong></p>
+                         </div>
+                         <div className="flex flex-col gap-2">
+                           <button onClick={() => handleAlternarPagamento(assentos.find(a => a.numero === assentoSelecionado)!.passageiroId!)} className="px-3 py-2 bg-brand-secondary/10 text-brand-dark text-xs font-bold rounded-lg hover:bg-brand-secondary/20 transition-colors">🔄 Alternar Pagamento</button>
+                           <button onClick={() => handleDesalocarPassageiro(assentos.find(a => a.numero === assentoSelecionado)!.passageiroId!)} className="px-3 py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors">✖ Desalocar Passageiro</button>
+                         </div>
+                       </div>
+                     </div>
                   ) : (
                     <button onClick={handleConfirmarAlocacao} className="px-3 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-primary/90">➕ Alocar aqui</button>
                   )}

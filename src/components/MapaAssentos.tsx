@@ -34,26 +34,27 @@ function Poltrona({
   selecionado: boolean
   onClick: () => void
 }) {
-  const { numero, ocupado } = assento
+  const { numero, ocupado, statusFinanceiro } = assento
 
   const base = 'relative flex flex-col items-center justify-center w-10 h-11 rounded-t-xl border-2 text-xs font-bold transition-all duration-150 select-none'
 
-  const estilo = ocupado
-    ? `${base} bg-gray-300 border-gray-400 text-gray-500 cursor-not-allowed`
-    : selecionado
+  const estilo = selecionado
       ? `${base} bg-brand-accent border-brand-alert text-brand-dark cursor-pointer scale-105 shadow-md`
-      : `${base} bg-green-600 border-green-700 text-white cursor-pointer hover:bg-green-500 hover:scale-105 hover:shadow-md`
+      : ocupado
+        ? (statusFinanceiro === 'pago' 
+            ? `${base} bg-brand-primary border-brand-primary text-white cursor-pointer hover:brightness-110`
+            : `${base} bg-orange-400 border-orange-500 text-white cursor-pointer hover:brightness-110`)
+        : `${base} bg-white border-brand-secondary/30 text-brand-dark cursor-pointer hover:bg-brand-light hover:scale-105 hover:shadow-sm`
 
   return (
     <button
       className={estilo}
-      onClick={ocupado ? undefined : onClick}
-      disabled={ocupado}
-      title={ocupado ? `Assento ${numero} — Ocupado` : `Assento ${numero} — Livre`}
+      onClick={onClick}
+      title={ocupado ? `Assento ${numero} — Ocupado (${statusFinanceiro})` : `Assento ${numero} — Livre`}
       id={`assento-${numero}`}
     >
       {/* Encosto visual */}
-      <div className={`absolute top-0 left-1 right-1 h-2 rounded-t-lg ${ocupado ? 'bg-gray-400' : selecionado ? 'bg-brand-alert' : 'bg-green-700'}`} />
+      <div className={`absolute top-0 left-1 right-1 h-2 rounded-t-lg ${ocupado ? (statusFinanceiro === 'pago' ? 'bg-white/30' : 'bg-white/40') : selecionado ? 'bg-brand-alert' : 'bg-brand-secondary/20'}`} />
       <span className="mt-1 z-10">{numero}</span>
     </button>
   )
@@ -259,7 +260,6 @@ export function MapaAssentos({
   const isOnibus = tipoTransporte.startsWith('Onibus')
   const total = assentos.length
   const livres = assentos.filter((a) => !a.ocupado).length
-  const ocupados = total - livres
 
   function handleSelect(assento: Assento) {
     onSelecionarAssento?.(assento)
@@ -270,12 +270,16 @@ export function MapaAssentos({
       {/* Legenda */}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-green-600" />
+          <div className="w-4 h-4 rounded bg-white border-2 border-brand-secondary/30" />
           <span className="text-xs text-brand-dark/70">Livre ({livres})</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-gray-300" />
-          <span className="text-xs text-brand-dark/70">Ocupado ({ocupados})</span>
+          <div className="w-4 h-4 rounded bg-brand-primary" />
+          <span className="text-xs text-brand-dark/70">Pago</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded bg-orange-400" />
+          <span className="text-xs text-brand-dark/70">Pendente</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-4 h-4 rounded bg-brand-accent border border-brand-alert" />

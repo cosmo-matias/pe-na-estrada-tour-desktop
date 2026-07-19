@@ -12,6 +12,7 @@ export interface Assento {
   numero: string | number
   ocupado: boolean
   passageiroId?: string
+  statusFinanceiro?: 'pago' | 'pendente'
 }
 
 // ── Layout do Transporte ──────────────────────────────────────────────
