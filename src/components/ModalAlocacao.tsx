@@ -86,14 +86,14 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     const tipo = detectarTipo(tipoString)
 
     const base = gerarAssentos(tipo, [])
+    
+    // Filtro de passageiros alocados no veículo atual (inclui fallback para passageiros legados sem veiculoAlocado)
+    const alocadosVeiculoAtual = passageiros.filter(p => 
+      p.numeroPoltrona && (!veiculoSelecionado || p.veiculoAlocado === veiculoSelecionado || !p.veiculoAlocado)
+    )
+
     const comOcupados: Assento[] = base.map((a) => {
-      const pax = passageiros.find((p) => {
-        const mesmoAssento = String(p.numeroPoltrona) === String(a.numero)
-        // Se houver veiculoSelecionado, o passageiro também precisa bater com o veículo
-        // (A menos que estejamos no modo legado sem veiculoSelecionado)
-        const mesmoVeiculo = veiculoSelecionado ? p.veiculoAlocado === veiculoSelecionado : true
-        return mesmoAssento && mesmoVeiculo
-      })
+      const pax = alocadosVeiculoAtual.find(p => String(p.numeroPoltrona) === String(a.numero))
       if (pax) {
         const tx = transacoes.find(t => t.passageiroId === pax.id)
         const statusFinanceiro = tx?.status === 'efetivada' ? 'pago' : 'pendente'
@@ -127,6 +127,9 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
   const tipo = detectarTipo(tipoString)
   const total = assentos.length
   const livres = assentos.filter((a) => !a.ocupado).length
+  
+  // Lista de passageiros sem assento (Desalocados)
+  const desalocados = passageiros.filter(p => !p.numeroPoltrona)
 
   // ── Helpers Financeiros ─────────────────────────────────────────────
   const calcularSaldoDevedor = () => {
@@ -508,6 +511,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                            <p className="text-xs text-brand-dark/60">Status Financeiro: <strong className={assentos.find(a => a.numero === assentoSelecionado)?.statusFinanceiro === 'pago' ? 'text-brand-primary' : 'text-orange-500'}>{assentos.find(a => a.numero === assentoSelecionado)?.statusFinanceiro?.toUpperCase()}</strong></p>
                          </div>
                          <div className="flex flex-col gap-2">
+                           <button onClick={() => setPaxFinanceiro(passageiros.find(p => p.id === assentos.find(a => a.numero === assentoSelecionado)?.passageiroId)!)} className="px-3 py-2 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-200 transition-colors">💰 Painel Financeiro</button>
                            <button onClick={() => handleAlternarPagamento(assentos.find(a => a.numero === assentoSelecionado)!.passageiroId!)} className="px-3 py-2 bg-brand-secondary/10 text-brand-dark text-xs font-bold rounded-lg hover:bg-brand-secondary/20 transition-colors">🔄 Alternar Pagamento</button>
                            <button onClick={() => handleDesalocarPassageiro(assentos.find(a => a.numero === assentoSelecionado)!.passageiroId!)} className="px-3 py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors">✖ Desalocar Passageiro</button>
                          </div>
@@ -566,7 +570,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                   onClick={() => setAbaAtiva(aba)}
                   className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${abaAtiva === aba ? 'border-b-2 border-brand-primary text-brand-primary bg-brand-primary/5' : 'text-brand-dark/50 hover:text-brand-dark'}`}
                 >
-                  {aba === 'mapa' ? '👥 Passageiros Alocados' : '📊 Detalhes do Passeio'}
+                  {aba === 'mapa' ? `👥 Desalocados (${desalocados.length})` : '📊 Detalhes do Passeio'}
                 </button>
               ))}
             </div>
@@ -574,15 +578,13 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
             <div className="flex-1 overflow-y-auto p-4">
               {abaAtiva === 'mapa' && (
                 <div className="space-y-2">
-                  {passageiros.length === 0 ? (
-                    <div className="text-center py-10 text-brand-dark/40 text-sm">Nenhum passageiro.</div>
+                  {desalocados.length === 0 ? (
+                    <div className="text-center py-10 text-brand-dark/40 text-sm">Nenhum passageiro desalocado.</div>
                   ) : (
-                    [...passageiros]
-                      .filter(p => !veiculoSelecionado || p.veiculoAlocado === veiculoSelecionado || (!p.veiculoAlocado && !p.numeroPoltrona))
-                      .sort((a, b) => Number(a.numeroPoltrona ?? 0) - Number(b.numeroPoltrona ?? 0))
+                    desalocados
                       .map((pax) => (
                         <div key={pax.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-brand-secondary/20 hover:border-brand-primary/30">
-                          <div className="w-9 h-9 rounded-full bg-brand-primary flex items-center justify-center text-white font-bold text-sm shadow-sm">{pax.numeroPoltrona ?? '—'}</div>
+                          <div className="w-9 h-9 rounded-full bg-brand-secondary/10 flex items-center justify-center text-brand-dark font-bold text-sm shadow-sm">{'—'}</div>
                           <div className="flex-1 min-w-0">
                             <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
                             <p className="text-brand-dark/50 text-xs">{pax.whatsapp}</p>
