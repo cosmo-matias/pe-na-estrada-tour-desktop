@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import type { Passeio } from '../types'
 import { PasseioCard } from '../components/PasseioCard'
@@ -52,13 +52,23 @@ const COLUNAS: KanbanColuna[] = [
 // ── Componente Principal ─────────────────────────────────────────────
 export function Passeios() {
   const [passeios, setPasseios] = useState<Passeio[]>([])
+  const [passageiros, setPassageiros] = useState<any[]>([])
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'passeios'), (snapshot) => {
+    const unsubPasseios = onSnapshot(collection(db, 'passeios'), (snapshot) => {
       const ps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Passeio))
       setPasseios(ps)
     })
-    return unsub
+    
+    const unsubPassageiros = onSnapshot(collection(db, 'passageiros'), (snapshot) => {
+      const paxs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      setPassageiros(paxs)
+    })
+
+    return () => {
+      unsubPasseios()
+      unsubPassageiros()
+    }
   }, [])
 
   // ── Estado do Modal de Alocação ────────────────────────────────────
@@ -126,6 +136,16 @@ export function Passeios() {
   const handleExcluir = async (id: string) => {
     const passeio = passeios.find((p) => p.id === id)
     if (!passeio) return
+    
+    // Verificação de segurança: contar passageiros vinculados no Firestore
+    const passageirosQuery = query(collection(db, 'passageiros'), where('passeioId', '==', id))
+    const passageirosSnapshot = await getDocs(passageirosQuery)
+    
+    if (!passageirosSnapshot.empty) {
+      alert(`⚠️ Não é possível excluir. Existem ${passageirosSnapshot.size} passageiros vinculados a este passeio. Cancele o passeio em vez disso, ou remova os passageiros primeiro.`)
+      return
+    }
+
     if (
       window.confirm(`🗑️ Excluir permanentemente o passeio "${passeio.destino}"?`)
     ) {
@@ -236,18 +256,22 @@ export function Passeios() {
                     <p className="text-brand-dark/40 text-sm">{coluna.emptyText}</p>
                   </div>
                 ) : (
-                  cards.map((passeio) => (
-                    <PasseioCard
-                      key={passeio.id}
-                      passeio={passeio}
-                      onGerarLink={handleGerarLink}
-                      onAlocar={handleAlocar}
-                      onEditar={handleEditar}
-                      onCancelar={handleCancelar}
-                      onExcluir={handleExcluir}
-                      onAtivar={handleAtivar}
-                    />
-                  ))
+                  cards.map((passeio) => {
+                    const temPassageiros = passageiros.some(p => p.passeioId === passeio.id)
+                    return (
+                      <PasseioCard
+                        key={passeio.id}
+                        passeio={passeio}
+                        temPassageiros={temPassageiros}
+                        onGerarLink={handleGerarLink}
+                        onAlocar={handleAlocar}
+                        onEditar={handleEditar}
+                        onCancelar={handleCancelar}
+                        onExcluir={handleExcluir}
+                        onAtivar={handleAtivar}
+                      />
+                    )
+                  })
                 )}
               </div>
             </section>

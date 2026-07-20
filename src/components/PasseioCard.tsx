@@ -8,6 +8,7 @@ interface PasseioCardProps {
   onCancelar?: (id: string) => void
   onExcluir?: (id: string) => void
   onAtivar?: (id: string) => void
+  temPassageiros?: boolean
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ export function PasseioCard({
   onCancelar,
   onExcluir,
   onAtivar,
+  temPassageiros = false,
 }: PasseioCardProps) {
   const {
     id,
@@ -46,8 +48,6 @@ export function PasseioCard({
     imagem,
   } = passeio
 
-  // Regra de negócio visual: Cancelar vs Excluir
-  const podeCancelar = passageirosAlocados > 0
 
   return (
     <article className="bg-white rounded-2xl shadow-sm border border-brand-secondary/20 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
@@ -163,7 +163,7 @@ export function PasseioCard({
             >
               <span>♻️</span> Ativar
             </button>
-          ) : podeCancelar ? (
+          ) : temPassageiros ? (
             <button
               id={`btn-cancelar-${id}`}
               onClick={() => onCancelar?.(id)}
@@ -175,7 +175,7 @@ export function PasseioCard({
             <button
               id={`btn-excluir-${id}`}
               onClick={() => onExcluir?.(id)}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-100 transition-colors"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-500 border border-red-600 text-white text-xs font-bold hover:bg-red-600 transition-colors shadow-sm shadow-red-500/30"
             >
               <span>🗑️</span> Excluir
             </button>
