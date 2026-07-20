@@ -1,32 +1,42 @@
-# React + TypeScript + Vite
+# Gerenciador Pé Na Estrada Tour
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+## Sobre o Projeto
+Sistema completo de gestão de passeios, alocação inteligente de passageiros no mapa de assentos e controle financeiro, projetado especificamente para as necessidades operacionais da empresa "Pé Na Estrada Tour".
 
-Currently, two official plugins are available:
+## Tecnologias
+- **React**: Biblioteca de interface de usuário (UI).
+- **TypeScript**: Tipagem estática para maior segurança e escalabilidade.
+- **Firebase**: Backend como serviço (Firestore, Authentication, Hosting).
+- **Tailwind CSS**: Estilização utilitária moderna e responsiva.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Funcionalidades
+- **Gestão de Frota Mista**: Criação de passeios utilizando diferentes tipos e quantidades de veículos.
+- **Mapa de Alocação Interativo**: Distribuição visual de passageiros nas poltronas, com filtros inteligentes de alocados e desalocados.
+- **Geração de Relatórios**: Exportação de PDFs profissionais (Resumo e Detalhado) utilizando tabelas automáticas e segregação por veículo.
+- **Controle Financeiro**: Acompanhamento dinâmico da receita, custos e margem de lucro por passeio e em nível global.
+- **Segurança de Acesso**: Proteção das rotas internas via Google Auth atrelada a uma *allowlist* rígida de administradores.
+- **Formulário de Inscrição Público**: Link de captação de clientes integrado diretamente com o banco de dados.
 
-## React Compiler
+## Instruções de Deploy
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Para rodar o projeto localmente e implantar atualizações em produção, siga os comandos abaixo:
 
-## Expanding the Oxlint configuration
+1. **Instalar dependências**:
+   ```bash
+   npm install
+   ```
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+2. **Rodar localmente (desenvolvimento)**:
+   ```bash
+   npm run dev
+   ```
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+3. **Gerar versão de produção (Build)**:
+   ```bash
+   npm run build
+   ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+4. **Publicar no Firebase Hosting (Deploy)**:
+   ```bash
+   npx firebase-tools deploy --only hosting
+   ```
