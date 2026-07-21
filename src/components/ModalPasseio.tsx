@@ -20,7 +20,6 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
     valorFormatado: '',
     locaisEmbarque: [] as string[],
     imagem: '',
-    agenteResponsavel: 'Ambos' as 'Cosmo' | 'Noêmia' | 'Ambos'
   })
   
   const [linhasFrota, setLinhasFrota] = useState<{ tipo: TipoTransporte, quantidade: number }[]>([{ tipo: 'Onibus 50', quantidade: 1 }])
@@ -37,7 +36,6 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         valorFormatado: passeioEdicao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         locaisEmbarque: passeioEdicao.locaisEmbarque || [],
         imagem: passeioEdicao.imagem || '',
-        agenteResponsavel: passeioEdicao.agenteResponsavel || 'Ambos'
       })
       if (passeioEdicao.transportes && passeioEdicao.transportes.length > 0) {
         const contagem: Record<string, number> = {}
@@ -68,7 +66,6 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         valorFormatado: '',
         locaisEmbarque: [],
         imagem: '',
-        agenteResponsavel: 'Ambos'
       })
       setLinhasFrota([{ tipo: 'Onibus 50', quantidade: 1 }])
       setDespesas([])
@@ -121,7 +118,6 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       transportes: frotaFinal,
       capacidade: frotaFinal.reduce((acc, v) => acc + v.capacidade, 0),
       imagem: formData.imagem,
-      agenteResponsavel: formData.agenteResponsavel,
       despesas: despesas.map(d => ({
         descricao: d.descricao,
         valor: Number(d.valor.replace(/\./g, '').replace(',', '.')) || 0
@@ -134,33 +130,7 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       if (passeioEdicao) {
         await updateDoc(doc(db, 'passeios', passeioEdicao.id), payload)
       } else {
-        const docRef = await addDoc(collection(db, 'passeios'), payload)
-        
-        // Criar Agentes Fictícios
-        const agentesParaCriar = []
-        if (formData.agenteResponsavel === 'Cosmo' || formData.agenteResponsavel === 'Ambos') {
-          agentesParaCriar.push('Agente Cosmo')
-        }
-        if (formData.agenteResponsavel === 'Noêmia' || formData.agenteResponsavel === 'Ambos') {
-          agentesParaCriar.push('Agente Noêmia')
-        }
-
-        for (const nomeAgente of agentesParaCriar) {
-          await addDoc(collection(db, 'passageiros'), {
-            passeioId: docRef.id,
-            nomeCompleto: nomeAgente,
-            dataNascimento: '',
-            cpf: '',
-            whatsapp: '',
-            contatoEmergencia: '',
-            endereco: { logradouro: '', bairro: '', cidade: '', estado: '' },
-            pontoEmbarque: '',
-            formaPagamento: 'pix',
-            statusAlocacao: 'nao_alocado',
-            numeroPoltrona: null,
-            veiculoAlocado: null
-          })
-        }
+        await addDoc(collection(db, 'passeios'), payload)
       }
       onFechar()
     } catch (error) {
@@ -228,22 +198,9 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Agente Responsável</label>
-            <select 
-              value={formData.agenteResponsavel} 
-              onChange={e => setFormData({ ...formData, agenteResponsavel: e.target.value as 'Cosmo' | 'Noêmia' | 'Ambos' })}
-              className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm"
-            >
-              <option value="Cosmo">Cosmo</option>
-              <option value="Noêmia">Noêmia</option>
-              <option value="Ambos">Ambos</option>
-            </select>
-          </div>
-
-          <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Locais de Embarque</label>
             <div className="flex flex-wrap gap-2">
-              {['Capim', 'Mamanguape', 'Cuité de Mamanguape', 'Sapé', 'João Pessoa', 'Itapororoca', 'Rio Tinto'].map(local => (
+              {['Capim', 'Mamanguape', 'Cuité de Mamanguape', 'Sapé', 'João Pessoa', 'Itapororoca', 'Rio Tinto', "Olho D'água"].map(local => (
                 <label key={local} className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-xl border border-brand-secondary/30 hover:border-brand-primary/50 transition-colors">
                   <input 
                     type="checkbox" 

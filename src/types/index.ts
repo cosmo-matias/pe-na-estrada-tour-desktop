@@ -14,6 +14,7 @@ export interface Assento {
   passageiroId?: string
   passageiroNome?: string
   statusFinanceiro?: 'pago' | 'pendente'
+  temCriancaColo?: boolean
 }
 
 // ── Layout do Transporte ──────────────────────────────────────────────
@@ -51,7 +52,6 @@ export interface Passeio {
   imagem: string
   layoutTransporte?: LayoutTransporte
   despesas?: { descricao: string; valor: number }[]
-  agenteResponsavel?: 'Cosmo' | 'Noêmia' | 'Ambos'
 }
 
 // ── Passageiro ────────────────────────────────────────────────────────
@@ -74,6 +74,9 @@ export interface Passageiro {
   statusAlocacao: 'alocado' | 'nao_alocado'
   numeroPoltrona: number | null
   veiculoAlocado?: string // Adicionado para suportar frotas
+  isAgente?: boolean
+  isCriancaColo?: boolean
+  nomeResponsavel?: string
   desconto?: {
     tipo: 'porcentagem' | 'fixo'
     valor: number

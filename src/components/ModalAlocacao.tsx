@@ -98,7 +98,12 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
       if (pax) {
         const tx = transacoes.find(t => t.passageiroId === pax.id)
         const statusFinanceiro = tx?.status === 'efetivada' ? 'pago' : 'pendente'
-        return { ...a, ocupado: true, passageiroId: pax.id, passageiroNome: pax.nomeCompleto, statusFinanceiro }
+        const temCrianca = passageiros.some(
+          p => p.numeroPoltrona?.toString() === a.numero?.toString() &&
+               p.isCriancaColo === true &&
+               p.veiculoAlocado === veiculoSelecionado
+        )
+        return { ...a, ocupado: true, passageiroId: pax.id, passageiroNome: pax.nomeCompleto, statusFinanceiro, temCriancaColo: temCrianca }
       }
       return a
     })
@@ -107,19 +112,43 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
 
   // Carrega transação quando abre modal financeiro
   useEffect(() => {
-    if (!paxFinanceiro) {
+    if (!paxFinanceiro || !passeio) {
       setTransacaoPax(null)
       return
     }
 
     const q = query(collection(db, 'transacoes'), where('passageiroId', '==', paxFinanceiro.id))
-    const unsub = onSnapshot(q, (snapshot) => {
+    const unsub = onSnapshot(q, async (snapshot) => {
       if (!snapshot.empty) {
         setTransacaoPax({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Transacao)
+      } else {
+        // Cria a transação automática para passageiros sem cobrança ainda
+        const { addDoc: firestoreAdd } = await import('firebase/firestore')
+        const novaRef = await firestoreAdd(collection(db, 'transacoes'), {
+          passageiroId: paxFinanceiro.id,
+          passeioId: passeio.id,
+          tipo: 'entrada',
+          status: 'pendente',
+          valorTotal: passeio.valor || 0,
+          valorPago: 0,
+          descricao: `Passeio: ${passeio.destino}`,
+          data: new Date().toISOString().split('T')[0],
+        })
+        setTransacaoPax({
+          id: novaRef.id,
+          passageiroId: paxFinanceiro.id,
+          passeioId: passeio.id,
+          tipo: 'entrada',
+          status: 'pendente',
+          valorTotal: passeio.valor || 0,
+          valorPago: 0,
+          descricao: `Passeio: ${passeio.destino}`,
+          data: new Date().toISOString().split('T')[0],
+        })
       }
     })
     return () => unsub()
-  }, [paxFinanceiro])
+  }, [paxFinanceiro, passeio])
 
   if (!aberto || !passeio) return null
 
@@ -164,6 +193,15 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
       } else {
         alert("Escolha um assento livre para realizar a troca.")
       }
+      return
+    }
+
+    // Permite selecionar assento ocupado SE estiver no modo de alocar criança de colo
+    if (selecionandoPassageiro && assento.ocupado) {
+      // Deixa o fluxo continuar — a validação é feita em handleAlocarPassageiro
+      setAssentoSelecionado((prev) =>
+        prev === assento.numero ? null : assento.numero
+      )
       return
     }
 
@@ -269,50 +307,90 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     currentY += 6
     doc.text(`Data: ${passeio.data.split('-').reverse().join('/')}`, pageWidth / 2, currentY, { align: 'center' })
     currentY += 6
-    doc.text(`Agente Responsável: ${passeio.agenteResponsavel || 'Não informado'}`, pageWidth / 2, currentY, { align: 'center' })
+    // Descobre os agentes dinamicamente a partir dos passageiros alocados
+    const agentesResumo = passageiros
+      .filter(p => (p as any).isAgente)
+      .map(p => p.nomeCompleto)
+      .join(', ')
+    doc.text(`Agente(s) Responsável(is): ${agentesResumo || 'Nenhum agente alocado neste veículo'}`, pageWidth / 2, currentY, { align: 'center' })
     currentY += 15
 
-    const bodyData: any[][] = []
-    
+    const bodyAdultos: any[][] = []
+    const bodyCriancas: any[][] = []
+
+    const popularArrays = (paxs: typeof passageiros) => {
+      const adultos = paxs.filter(p => !p.isCriancaColo)
+      const criancas = paxs.filter(p => p.isCriancaColo)
+
+      adultos.forEach(pax => {
+         bodyAdultos.push([
+           String(pax.numeroPoltrona || 0).padStart(2, '0'),
+           pax.nomeCompleto,
+           calcularIdade(pax.dataNascimento),
+           pax.whatsapp || '',
+           pax.pontoEmbarque || '',
+         ])
+      })
+
+      criancas.forEach(c => {
+         bodyCriancas.push([
+           String(c.numeroPoltrona || 0).padStart(2, '0'),
+           c.nomeCompleto,
+           calcularIdade(c.dataNascimento),
+           c.nomeResponsavel || '-',
+           c.pontoEmbarque || '-',
+         ])
+      })
+    }
+
     if (passeio.transportes && passeio.transportes.length > 0) {
       passeio.transportes.forEach((veic) => {
         const paxsVeiculo = passageiros
           .filter(p => p.veiculoAlocado === veic.id && p.numeroPoltrona != null)
           .sort((a, b) => (Number(a.numeroPoltrona) || 0) - (Number(b.numeroPoltrona) || 0))
           
-        paxsVeiculo.forEach(pax => {
-           const tx = transacoes.find(t => t.passageiroId === pax.id)
-           const statusFin = tx?.status === 'efetivada' ? 'Pago' : (tx?.status === 'parcial' ? 'Parcial' : 'Pendente')
-           bodyData.push([
-             pax.numeroPoltrona || '-',
-             pax.nomeCompleto,
-             veic.nome || '-',
-             statusFin
-           ])
-        })
+        popularArrays(paxsVeiculo)
       })
     } else {
       const paxsAlocados = passageiros
         .filter(p => p.numeroPoltrona != null)
         .sort((a, b) => (Number(a.numeroPoltrona) || 0) - (Number(b.numeroPoltrona) || 0))
         
-      paxsAlocados.forEach(pax => {
-         const tx = transacoes.find(t => t.passageiroId === pax.id)
-         const statusFin = tx?.status === 'efetivada' ? 'Pago' : (tx?.status === 'parcial' ? 'Parcial' : 'Pendente')
-         bodyData.push([
-           pax.numeroPoltrona || '-',
-           pax.nomeCompleto,
-           'Único',
-           statusFin
-         ])
-      })
+      popularArrays(paxsAlocados)
     }
 
     autoTable(doc, {
       startY: currentY,
-      head: [['Nome do Passageiro', 'Poltrona', 'Veículo', 'Status Financeiro']],
-      body: bodyData,
+      head: [['Poltrona', 'Nome', 'Idade', 'WhatsApp', 'Embarque']],
+      body: bodyAdultos,
+      styles: { cellPadding: 2, fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 18 },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 14 },
+        3: { cellWidth: 36 },
+        4: { cellWidth: 'auto' },
+      }
     })
+
+    if (bodyCriancas.length > 0) {
+      const finalY = (doc as any).lastAutoTable.finalY + 15
+      doc.setFontSize(14)
+      doc.text('Crianças de Colo', 14, finalY)
+      autoTable(doc, {
+        startY: finalY + 5,
+        head: [['Poltrona', 'Nome', 'Idade', 'Responsável', 'Embarque']],
+        body: bodyCriancas,
+        styles: { cellPadding: 2, fontSize: 9 },
+        columnStyles: {
+          0: { cellWidth: 18 },
+          1: { cellWidth: 'auto' },
+          2: { cellWidth: 14 },
+          3: { cellWidth: 36 },
+          4: { cellWidth: 'auto' },
+        }
+      })
+    }
 
     doc.save(`Resumo_${passeio.destino.replace(/\s+/g, '_')}.pdf`)
   }
@@ -357,7 +435,12 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     currentY += 6
     doc.text(`Data: ${passeio.data.split('-').reverse().join('/')}`, pageWidth / 2, currentY, { align: 'center' })
     currentY += 6
-    doc.text(`Agente Responsável: ${passeio.agenteResponsavel || 'Não informado'}`, pageWidth / 2, currentY, { align: 'center' })
+    // Descobre os agentes dinamicamente por veículo
+    const agentesDetalhado = passageiros
+      .filter(p => (p as any).isAgente)
+      .map(p => p.nomeCompleto)
+      .join(', ')
+    doc.text(`Agente(s) Responsável(is): ${agentesDetalhado || 'Nenhum agente alocado neste veículo'}`, pageWidth / 2, currentY, { align: 'center' })
     currentY += 15
 
     if (passeio.transportes && passeio.transportes.length > 0) {
@@ -375,14 +458,18 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
         doc.text(`Veículo: ${veic.nome} (${veic.tipo})`, 14, currentY)
         currentY += 8
 
-        const tableData = paxsDoVeiculo.map(p => {
+        const adultos = paxsDoVeiculo.filter(p => !p.isCriancaColo)
+        const criancas = paxsDoVeiculo.filter(p => p.isCriancaColo)
+
+        const tableData = adultos.map(p => {
           const tx = transacoes.find(t => t.passageiroId === p.id)
           const statusFin = tx?.status === 'efetivada' ? 'Pago' : (tx?.status === 'parcial' ? 'Parcial' : 'Pendente')
           return [
-            p.numeroPoltrona || '-',
+            String(p.numeroPoltrona || 0).padStart(2, '0'),
             p.nomeCompleto,
             calcularIdade(p.dataNascimento),
-            p.whatsapp,
+            p.whatsapp || '',
+            p.cpf || '-',
             p.pontoEmbarque || '-',
             statusFin
           ]
@@ -390,19 +477,47 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
 
         autoTable(doc, {
           startY: currentY,
-          head: [['Poltrona', 'Nome', 'Idade', 'WhatsApp', 'Embarque', 'Status']],
+          head: [['Polt.', 'Nome', 'Idade', 'WhatsApp', 'CPF', 'Embarque', 'Status']],
           body: tableData,
-          styles: { cellPadding: 2 },
+          styles: { cellPadding: 2, fontSize: 8 },
           columnStyles: {
-            0: { cellWidth: 20 },
+            0: { cellWidth: 14 },
             1: { cellWidth: 'auto' },
-            2: { cellWidth: 15 },
-            3: { cellWidth: 35 },
-            4: { cellWidth: 'auto' },
-            5: { cellWidth: 30 }
+            2: { cellWidth: 12 },
+            3: { cellWidth: 32 },
+            4: { cellWidth: 30 },
+            5: { cellWidth: 'auto' },
+            6: { cellWidth: 20 },
           }
         })
         
+        if (criancas.length > 0) {
+          const finalY = (doc as any).lastAutoTable.finalY + 10
+          doc.setFontSize(14)
+          doc.text('Crianças de Colo', 14, finalY)
+          const criancasData = criancas.map(c => [
+            String(c.numeroPoltrona || 0).padStart(2, '0'),
+            c.nomeCompleto,
+            calcularIdade(c.dataNascimento),
+            c.cpf || '-',
+            c.nomeResponsavel || '-',
+            c.whatsapp || '-'
+          ])
+          autoTable(doc, {
+            startY: finalY + 5,
+            head: [['Polt.', 'Nome', 'Idade', 'CPF', 'Responsável', 'WhatsApp']],
+            body: criancasData,
+            styles: { cellPadding: 2, fontSize: 8 },
+            columnStyles: {
+              0: { cellWidth: 14 },
+              1: { cellWidth: 'auto' },
+              2: { cellWidth: 12 },
+              3: { cellWidth: 30 },
+              4: { cellWidth: 'auto' },
+              5: { cellWidth: 32 },
+            }
+          })
+        }
         currentY = (doc as any).lastAutoTable.finalY + 15
       })
     } else {
@@ -410,14 +525,18 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
         .filter(p => p.numeroPoltrona != null)
         .sort((a, b) => (Number(a.numeroPoltrona) || 0) - (Number(b.numeroPoltrona) || 0))
 
-      const tableData = paxsAlocados.map(p => {
+      const adultos = paxsAlocados.filter(p => !p.isCriancaColo)
+      const criancas = paxsAlocados.filter(p => p.isCriancaColo)
+
+      const tableData = adultos.map(p => {
         const tx = transacoes.find(t => t.passageiroId === p.id)
         const statusFin = tx?.status === 'efetivada' ? 'Pago' : (tx?.status === 'parcial' ? 'Parcial' : 'Pendente')
         return [
-          p.numeroPoltrona || '-',
+          String(p.numeroPoltrona || 0).padStart(2, '0'),
           p.nomeCompleto,
           calcularIdade(p.dataNascimento),
-          p.whatsapp,
+          p.whatsapp || '',
+          p.cpf || '-',
           p.pontoEmbarque || '-',
           statusFin
         ]
@@ -425,18 +544,47 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
 
       autoTable(doc, {
         startY: currentY,
-        head: [['Poltrona', 'Nome', 'Idade', 'WhatsApp', 'Embarque', 'Status']],
+        head: [['Polt.', 'Nome', 'Idade', 'WhatsApp', 'CPF', 'Embarque', 'Status']],
         body: tableData,
-        styles: { cellPadding: 2 },
+        styles: { cellPadding: 2, fontSize: 8 },
         columnStyles: {
-          0: { cellWidth: 20 },
+          0: { cellWidth: 14 },
           1: { cellWidth: 'auto' },
-          2: { cellWidth: 15 },
-          3: { cellWidth: 35 },
-          4: { cellWidth: 'auto' },
-          5: { cellWidth: 30 }
+          2: { cellWidth: 12 },
+          3: { cellWidth: 32 },
+          4: { cellWidth: 30 },
+          5: { cellWidth: 'auto' },
+          6: { cellWidth: 20 },
         }
       })
+      
+      if (criancas.length > 0) {
+        const finalY = (doc as any).lastAutoTable.finalY + 10
+        doc.setFontSize(14)
+        doc.text('Crianças de Colo', 14, finalY)
+        const criancasData = criancas.map(c => [
+          String(c.numeroPoltrona || 0).padStart(2, '0'),
+          c.nomeCompleto,
+          calcularIdade(c.dataNascimento),
+          c.cpf || '-',
+          c.nomeResponsavel || '-',
+          c.whatsapp || '-'
+        ])
+        autoTable(doc, {
+          startY: finalY + 5,
+          head: [['Polt.', 'Nome', 'Idade', 'CPF', 'Responsável', 'WhatsApp']],
+          body: criancasData,
+          styles: { cellPadding: 2, fontSize: 8 },
+          columnStyles: {
+            0: { cellWidth: 14 },
+            1: { cellWidth: 'auto' },
+            2: { cellWidth: 12 },
+            3: { cellWidth: 30 },
+            4: { cellWidth: 'auto' },
+            5: { cellWidth: 32 },
+          }
+        })
+      }
     }
 
     doc.save(`Lista_Detalhada_${passeio.destino.replace(/\s+/g, '_')}.pdf`)
@@ -451,6 +599,13 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     const destino = assentoDestino ?? assentoSelecionado
     const pax = passageiros.find(p => p.id === paxId)
     if (!destino) return
+
+    // Bloqueia alocação em assento ocupado, EXCETO para crianças de colo
+    const assentoObj = assentos.find(a => a.numero === destino)
+    if (assentoObj?.ocupado && !pax?.isCriancaColo) {
+      alert('Este assento já está ocupado. Apenas crianças de colo podem compartilhar um assento.')
+      return
+    }
 
     try {
       await updateDoc(doc(db, 'passageiros', paxId), {
@@ -530,14 +685,21 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
         <div className="flex flex-1 overflow-hidden relative">
 
           {/* Overlay de Financeiro se paxFinanceiro existir */}
-          {paxFinanceiro && transacaoPax && (
-            <div className="absolute inset-0 z-20 bg-brand-light flex flex-col">
+          {paxFinanceiro && (
+            <div className="absolute inset-0 z-[60] bg-brand-light flex flex-col">
               <div className="p-4 bg-white border-b flex justify-between items-center">
                 <h3 className="font-bold text-brand-dark">Painel Financeiro: {paxFinanceiro.nomeCompleto}</h3>
                 <button onClick={() => setPaxFinanceiro(null)} className="text-brand-dark/50 hover:text-brand-dark">✕ Fechar</button>
               </div>
               <div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
                 
+                {!transacaoPax ? (
+                  <div className="col-span-2 flex flex-col items-center justify-center py-16 gap-3">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-primary"></div>
+                    <p className="text-brand-dark/60 text-sm">Carregando dados financeiros...</p>
+                  </div>
+                ) : (
+                <>
                 {/* Esquerda: Resumo */}
                 <div className="space-y-6">
                   <div className="bg-white p-5 rounded-2xl border shadow-sm">
@@ -637,6 +799,8 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                     )}
                   </div>
                 </div>
+                </>
+                )}
               </div>
             </div>
           )}
@@ -712,7 +876,12 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                       {desalocados.map(pax => (
                          <div key={pax.id} className="flex justify-between items-center p-2 border rounded-lg hover:border-brand-primary/50 cursor-pointer bg-brand-light/30" onClick={() => handleAlocarPassageiro(pax.id)}>
                             <div className="min-w-0 flex-1">
-                               <p className="font-bold text-xs truncate text-brand-dark">{pax.nomeCompleto}</p>
+                               <div className="flex items-center gap-1">
+                                 <p className="font-bold text-xs truncate text-brand-dark">{pax.nomeCompleto}</p>
+                                 {(pax as any).isAgente && (
+                                   <span className="flex-shrink-0 text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">⭐ AGENTE</span>
+                                 )}
+                               </div>
                                <p className="text-[10px] text-brand-dark/60 truncate">{pax.whatsapp}</p>
                             </div>
                             <span className="text-[10px] bg-brand-primary text-white px-2 py-1 rounded font-bold ml-2">Selecionar</span>
@@ -769,9 +938,14 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                       .map((pax) => (
                         <div key={pax.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-brand-secondary/20 hover:border-brand-primary/30">
                           <div className="w-9 h-9 rounded-full bg-brand-secondary/10 flex items-center justify-center text-brand-dark font-bold text-sm shadow-sm">{'—'}</div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
-                            <p className="text-brand-dark/50 text-[10px]">{pax.whatsapp}</p>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
+                                {(pax as any).isAgente && (
+                                  <span className="flex-shrink-0 text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">⭐ AGENTE</span>
+                                )}
+                              </div>
+                              <p className="text-brand-dark/50 text-[10px]">{pax.whatsapp}</p>
                           </div>
                           <button 
                             onClick={() => setPaxFinanceiro(pax)}
@@ -797,7 +971,12 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                           <div key={pax.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-brand-secondary/20 hover:border-brand-primary/30">
                             <div className="w-9 h-9 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-sm shadow-sm">{pax.numeroPoltrona}</div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
+                                {(pax as any).isAgente && (
+                                  <span className="flex-shrink-0 text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">⭐ AGENTE</span>
+                                )}
+                              </div>
                               <p className="text-brand-dark/50 text-[10px] truncate">{pax.whatsapp}</p>
                               <span className="inline-block mt-1 px-2 py-0.5 bg-brand-light text-brand-dark/70 text-[10px] font-bold rounded">Assento {pax.numeroPoltrona} • {vNome}</span>
                             </div>

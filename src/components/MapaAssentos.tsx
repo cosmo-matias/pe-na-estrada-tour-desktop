@@ -34,7 +34,7 @@ function Poltrona({
   selecionado: boolean
   onClick: () => void
 }) {
-  const { numero, ocupado, statusFinanceiro, passageiroNome } = assento
+  const { numero, ocupado, statusFinanceiro, passageiroNome, temCriancaColo } = assento
 
   const exibirNome = (nomeCompleto: string) => {
     const partes = nomeCompleto.trim().split(' ')
@@ -55,12 +55,15 @@ function Poltrona({
     <button
       className={estilo}
       onClick={onClick}
-      title={ocupado ? `${passageiroNome ? exibirNome(passageiroNome) : `Assento ${numero}`} — Ocupado (${statusFinanceiro})` : `Assento ${numero} — Livre`}
+      title={ocupado ? `${passageiroNome ? exibirNome(passageiroNome) : `Assento ${numero}`} — Ocupado (${statusFinanceiro})${temCriancaColo ? ' + 👶 Criança de colo' : ''}` : `Assento ${numero} — Livre`}
       id={`assento-${numero}`}
     >
       {/* Encosto visual */}
       <div className={`absolute top-0 left-1 right-1 h-2 rounded-t-lg ${ocupado ? (statusFinanceiro === 'pago' ? 'bg-white/30' : 'bg-white/40') : selecionado ? 'bg-brand-alert' : 'bg-brand-secondary/20'}`} />
       <span className="mt-1 z-10">{numero}</span>
+      {temCriancaColo && (
+        <span className="absolute -bottom-1 -right-1 text-[8px] leading-none z-20" title="Criança de colo neste assento">👶</span>
+      )}
     </button>
   )
 }
