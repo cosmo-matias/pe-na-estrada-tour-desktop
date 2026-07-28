@@ -24,9 +24,10 @@ interface ModalPassageiroFormProps {
   onFechar: () => void
   passageiroEdicao?: Passageiro
   passeios: Passeio[]
+  passageiros?: Passageiro[]
 }
 
-export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passeios }: ModalPassageiroFormProps) {
+export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passeios, passageiros = [] }: ModalPassageiroFormProps) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     nomeCompleto: '',
@@ -44,6 +45,7 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
   const [isAgente, setIsAgente] = useState(false)
   const [isCriancaColo, setIsCriancaColo] = useState(false)
   const [nomeResponsavel, setNomeResponsavel] = useState('')
+  const [responsavelId, setResponsavelId] = useState('')
 
   useEffect(() => {
     if (passageiroEdicao) {
@@ -63,6 +65,16 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
       setIsAgente(passageiroEdicao.isAgente || false)
       setIsCriancaColo(passageiroEdicao.isCriancaColo || false)
       setNomeResponsavel(passageiroEdicao.nomeResponsavel || '')
+      let initialRespId = passageiroEdicao.responsavelId || ''
+      if (!initialRespId && passageiroEdicao.nomeResponsavel && passageiroEdicao.isCriancaColo) {
+        const encontrado = passageiros.find(
+          (p) => p.passeioId === passageiroEdicao.passeioId && !p.isCriancaColo && p.nomeCompleto === passageiroEdicao.nomeResponsavel
+        )
+        if (encontrado) {
+          initialRespId = encontrado.id
+        }
+      }
+      setResponsavelId(initialRespId)
     } else {
       setFormData({
         nomeCompleto: '', cpf: '', dataNascimento: '', whatsapp: '', contatoEmergencia: '',
@@ -71,12 +83,17 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
       setIsAgente(false)
       setIsCriancaColo(false)
       setNomeResponsavel('')
+      setResponsavelId('')
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passageiroEdicao, aberto])
 
   if (!aberto) return null
 
   const passeiosAtivos = passeios.filter(p => p.status === 'a_realizar')
+  const responsaveisDisponiveis = passageiros.filter(
+    (p) => p.passeioId === formData.passeioId && !p.isCriancaColo && p.id !== passageiroEdicao?.id
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -103,6 +120,7 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
       isAgente,
       isCriancaColo,
       nomeResponsavel: isCriancaColo ? nomeResponsavel : '',
+      responsavelId: isCriancaColo ? (responsavelId || '') : '',
     }
 
     try {
@@ -276,15 +294,30 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
 
           {isCriancaColo && (
             <div className="pt-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Nome do Responsável <span className="text-red-500">*</span></label>
-              <input
-                type="text"
+              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">
+                Selecione o Responsável <span className="text-red-500">*</span>
+              </label>
+              <select
                 required={isCriancaColo}
-                value={nomeResponsavel}
-                onChange={e => setNomeResponsavel(e.target.value)}
-                placeholder="Nome completo do responsável"
-                className="w-full px-4 py-3 bg-brand-light border border-blue-300 rounded-xl focus:border-blue-500 outline-none text-sm"
-              />
+                value={responsavelId}
+                onChange={(e) => {
+                  const id = e.target.value
+                  setResponsavelId(id)
+                  const resp = passageiros.find((p) => p.id === id)
+                  setNomeResponsavel(resp ? resp.nomeCompleto : '')
+                }}
+                className="w-full px-4 py-3 bg-brand-light border border-blue-300 rounded-xl focus:border-blue-500 outline-none text-sm font-medium text-brand-dark cursor-pointer"
+              >
+                <option value="">-- Selecione o passageiro responsável --</option>
+                {responsaveisDisponiveis.map((resp) => (
+                  <option key={resp.id} value={resp.id}>
+                    {resp.nomeCompleto} {resp.whatsapp ? `(${formatarWhatsApp(resp.whatsapp)})` : ''}
+                  </option>
+                ))}
+              </select>
+              {!formData.passeioId && (
+                <p className="text-xs text-amber-600 mt-1">Selecione um passeio primeiro para listar os responsáveis disponíveis.</p>
+              )}
             </div>
           )}
 

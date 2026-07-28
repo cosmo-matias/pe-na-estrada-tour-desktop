@@ -16,6 +16,11 @@ Sistema completo de gestão de passeios, alocação inteligente de passageiros n
 - **Controle Financeiro**: Acompanhamento dinâmico da receita, custos e margem de lucro por passeio e em nível global.
 - **Segurança de Acesso**: Proteção das rotas internas via Google Auth atrelada a uma *allowlist* rígida de administradores.
 - **Formulário de Inscrição Público**: Link de captação de clientes integrado diretamente com o banco de dados.
+- **Sistema Dinâmico de Agentes**: Identificação visual e separação de Guias/Agentes de Turismo por veículo.
+- **Gestão de Crianças de Colo**: Alocação de assento compartilhado (Adulto + Bebê) com listagem separada para controle seguro do guia.
+- **Relatórios Inteligentes em PDF**: Geração de listas de embarque detalhadas e resumos, segregadas por veículo, agentes responsáveis e crianças de colo.
+- **Otimização para Redes Sociais (Open Graph)**: Link público de reservas preparado com preview visual personalizado para compartilhamento no WhatsApp.
+- **Validação e Máscaras de Dados**: Formulários internos protegidos com formatação automática de CPF, WhatsApp e UF.
 
 ## Instruções de Deploy
 

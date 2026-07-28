@@ -99,6 +99,7 @@ export function Passageiros() {
         onFechar={() => setModalFormAberto(false)}
         passageiroEdicao={passageiroEdicao}
         passeios={passeios}
+        passageiros={passageiros}
       />
 
       <ModalPassageiroDetalhes
