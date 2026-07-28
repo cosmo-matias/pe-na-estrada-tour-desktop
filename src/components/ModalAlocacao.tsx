@@ -94,15 +94,12 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     )
 
     const comOcupados: Assento[] = base.map((a) => {
-      const pax = alocadosVeiculoAtual.find(p => String(p.numeroPoltrona) === String(a.numero))
+      const paxsNoAssento = alocadosVeiculoAtual.filter(p => String(p.numeroPoltrona) === String(a.numero))
+      const pax = paxsNoAssento.find(p => !p.isCriancaColo) || paxsNoAssento[0]
       if (pax) {
         const tx = transacoes.find(t => t.passageiroId === pax.id)
         const statusFinanceiro = tx?.status === 'efetivada' ? 'pago' : 'pendente'
-        const temCrianca = passageiros.some(
-          p => p.numeroPoltrona?.toString() === a.numero?.toString() &&
-               p.isCriancaColo === true &&
-               p.veiculoAlocado === veiculoSelecionado
-        )
+        const temCrianca = paxsNoAssento.some(p => p.isCriancaColo === true)
         return { ...a, ocupado: true, passageiroId: pax.id, passageiroNome: pax.nomeCompleto, statusFinanceiro, temCriancaColo: temCrianca }
       }
       return a
@@ -612,11 +609,45 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
         numeroPoltrona: destino,
         veiculoAlocado: veiculoSelecionado
       })
-      if (passeio && !pax?.numeroPoltrona) {
+
+      // Alocação em cascata: busca crianças de colo vinculadas a este responsável
+      const criancasVinculadas = !pax?.isCriancaColo ? passageiros.filter(p =>
+        p.isCriancaColo && (p.responsavelId === paxId || (!p.responsavelId && p.nomeResponsavel && p.nomeResponsavel === pax?.nomeCompleto))
+      ) : []
+
+      let incrementAlocados = !pax?.numeroPoltrona ? 1 : 0
+      const idsAtualizados = new Set([paxId])
+
+      for (const crianca of criancasVinculadas) {
+        await updateDoc(doc(db, 'passageiros', crianca.id), {
+          numeroPoltrona: destino,
+          veiculoAlocado: veiculoSelecionado
+        })
+        if (!crianca.numeroPoltrona) {
+          incrementAlocados += 1
+        }
+        idsAtualizados.add(crianca.id)
+      }
+
+      if (passeio && incrementAlocados > 0) {
         await updateDoc(doc(db, 'passeios', passeio.id), {
-          passageirosAlocados: (passeio.passageirosAlocados || 0) + 1
+          passageirosAlocados: (passeio.passageirosAlocados || 0) + incrementAlocados
         })
       }
+
+      // Atualiza o estado local imediatamente
+      const numDestino = typeof destino === 'string' && !isNaN(Number(destino)) ? Number(destino) : (typeof destino === 'number' ? destino : null)
+      setPassageiros(prev => prev.map(p => {
+        if (idsAtualizados.has(p.id)) {
+          return {
+            ...p,
+            numeroPoltrona: typeof destino === 'number' ? destino : (numDestino ?? null),
+            veiculoAlocado: veiculoSelecionado || undefined
+          }
+        }
+        return p
+      }))
+
       setSelecionandoPassageiro(false)
       setAssentoSelecionado(null)
       setPassageiroEmTroca(null)
@@ -628,16 +659,47 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
 
   async function handleDesalocarPassageiro(paxId: string) {
     if(!confirm('Deseja realmente remover este passageiro do assento?')) return
+    const pax = passageiros.find(p => p.id === paxId)
+    const criancasVinculadas = !pax?.isCriancaColo ? passageiros.filter(p =>
+      p.isCriancaColo && (p.responsavelId === paxId || (!p.responsavelId && p.nomeResponsavel && p.nomeResponsavel === pax?.nomeCompleto))
+    ) : []
+
     try {
       await updateDoc(doc(db, 'passageiros', paxId), {
         numeroPoltrona: null,
         veiculoAlocado: null
       })
-      if (passeio) {
+
+      let decremento = pax?.numeroPoltrona ? 1 : 0
+      const idsLimpos = new Set([paxId])
+
+      for (const crianca of criancasVinculadas) {
+        if (crianca.numeroPoltrona !== null && crianca.numeroPoltrona !== undefined) {
+          await updateDoc(doc(db, 'passageiros', crianca.id), {
+            numeroPoltrona: null,
+            veiculoAlocado: null
+          })
+          decremento += 1
+          idsLimpos.add(crianca.id)
+        }
+      }
+
+      if (passeio && decremento > 0) {
         await updateDoc(doc(db, 'passeios', passeio.id), {
-          passageirosAlocados: Math.max(0, (passeio.passageirosAlocados || 1) - 1)
+          passageirosAlocados: Math.max(0, (passeio.passageirosAlocados || decremento) - decremento)
         })
       }
+
+      setPassageiros(prev => prev.map(p => {
+        if (idsLimpos.has(p.id)) {
+          return {
+            ...p,
+            numeroPoltrona: null,
+            veiculoAlocado: undefined
+          }
+        }
+        return p
+      }))
       setAssentoSelecionado(null)
     } catch (err) {
       console.error(err)
@@ -850,15 +912,34 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                          <button onClick={() => setAssentoSelecionado(null)} className="text-brand-dark/50 hover:text-brand-dark leading-none">✕</button>
                        </div>
                        <div className="p-3 space-y-3 bg-white">
-                         <div className="text-sm text-brand-dark">
-                           <p className="font-bold">{passageiros.find(p => p.id === assentos.find(a => a.numero === assentoSelecionado)?.passageiroId)?.nomeCompleto}</p>
-                           <p className="text-xs text-brand-dark/60">Status Financeiro: <strong className={assentos.find(a => a.numero === assentoSelecionado)?.statusFinanceiro === 'pago' ? 'text-brand-primary' : 'text-orange-500'}>{assentos.find(a => a.numero === assentoSelecionado)?.statusFinanceiro?.toUpperCase()}</strong></p>
-                         </div>
-                         <div className="flex flex-col gap-2">
-                           <button onClick={() => setPaxFinanceiro(passageiros.find(p => p.id === assentos.find(a => a.numero === assentoSelecionado)?.passageiroId)!)} className="px-3 py-2 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-200 transition-colors">💰 Painel Financeiro</button>
-                           <button onClick={() => handleIniciarTroca(assentos.find(a => a.numero === assentoSelecionado)!.passageiroId!)} className="px-3 py-2 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-200 transition-colors">🔄 Trocar de Poltrona</button>
-                           <button onClick={() => handleDesalocarPassageiro(assentos.find(a => a.numero === assentoSelecionado)!.passageiroId!)} className="px-3 py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors">✖ Desalocar Passageiro</button>
-                         </div>
+                          {(() => {
+                            const assentoObj = assentos.find(a => a.numero === assentoSelecionado)
+                            const paxPrincipal = passageiros.find(p => p.id === assentoObj?.passageiroId)
+                            const criancasNoAssento = passageiros.filter(
+                              p => p.isCriancaColo && String(p.numeroPoltrona) === String(assentoSelecionado) && p.veiculoAlocado === veiculoSelecionado && p.id !== paxPrincipal?.id
+                            )
+                            return (
+                              <>
+                                <div className="text-sm text-brand-dark">
+                                  <p className="font-bold">{paxPrincipal?.nomeCompleto}</p>
+                                  <p className="text-xs text-brand-dark/60">Status Financeiro: <strong className={assentoObj?.statusFinanceiro === 'pago' ? 'text-brand-primary' : 'text-orange-500'}>{assentoObj?.statusFinanceiro?.toUpperCase()}</strong></p>
+                                  {criancasNoAssento.length > 0 && (
+                                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+                                      <p className="font-semibold flex items-center gap-1">👶 Criança(s) em colo:</p>
+                                      {criancasNoAssento.map(c => (
+                                        <p key={c.id} className="text-blue-900 ml-3">• {c.nomeCompleto}</p>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                  <button onClick={() => setPaxFinanceiro(paxPrincipal!)} className="px-3 py-2 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg hover:bg-emerald-200 transition-colors">💰 Painel Financeiro</button>
+                                  <button onClick={() => handleIniciarTroca(paxPrincipal!.id)} className="px-3 py-2 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-200 transition-colors">🔄 Trocar de Poltrona</button>
+                                  <button onClick={() => handleDesalocarPassageiro(paxPrincipal!.id)} className="px-3 py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors">✖ Desalocar Passageiro</button>
+                                </div>
+                              </>
+                            )
+                          })()}
                        </div>
                      </div>
                   ) : (
@@ -944,6 +1025,9 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                                 {(pax as any).isAgente && (
                                   <span className="flex-shrink-0 text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">⭐ AGENTE</span>
                                 )}
+                                {pax.isCriancaColo && (
+                                  <span className="flex-shrink-0 text-[9px] font-bold bg-blue-100 text-blue-700 border border-blue-300 px-1.5 py-0.5 rounded-full" title={pax.nomeResponsavel ? `Responsável: ${pax.nomeResponsavel}` : 'Criança de colo'}>👶 COLO</span>
+                                )}
                               </div>
                               <p className="text-brand-dark/50 text-[10px]">{pax.whatsapp}</p>
                           </div>
@@ -975,6 +1059,9 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                                 <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
                                 {(pax as any).isAgente && (
                                   <span className="flex-shrink-0 text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">⭐ AGENTE</span>
+                                )}
+                                {pax.isCriancaColo && (
+                                  <span className="flex-shrink-0 text-[9px] font-bold bg-blue-100 text-blue-700 border border-blue-300 px-1.5 py-0.5 rounded-full" title={pax.nomeResponsavel ? `Responsável: ${pax.nomeResponsavel}` : 'Criança de colo'}>👶 COLO</span>
                                 )}
                               </div>
                               <p className="text-brand-dark/50 text-[10px] truncate">{pax.whatsapp}</p>
