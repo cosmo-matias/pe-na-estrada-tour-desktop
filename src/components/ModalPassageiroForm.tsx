@@ -46,6 +46,8 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
   const [isCriancaColo, setIsCriancaColo] = useState(false)
   const [nomeResponsavel, setNomeResponsavel] = useState('')
   const [responsavelId, setResponsavelId] = useState('')
+  const [buscaResponsavel, setBuscaResponsavel] = useState('')
+  const [mostrarListaResponsaveis, setMostrarListaResponsaveis] = useState(false)
 
   useEffect(() => {
     if (passageiroEdicao) {
@@ -75,6 +77,8 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
         }
       }
       setResponsavelId(initialRespId)
+      setBuscaResponsavel('')
+      setMostrarListaResponsaveis(false)
     } else {
       setFormData({
         nomeCompleto: '', cpf: '', dataNascimento: '', whatsapp: '', contatoEmergencia: '',
@@ -84,6 +88,8 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
       setIsCriancaColo(false)
       setNomeResponsavel('')
       setResponsavelId('')
+      setBuscaResponsavel('')
+      setMostrarListaResponsaveis(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passageiroEdicao, aberto])
@@ -93,6 +99,9 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
   const passeiosAtivos = passeios.filter(p => p.status === 'a_realizar')
   const responsaveisDisponiveis = passageiros.filter(
     (p) => p.passeioId === formData.passeioId && !p.isCriancaColo && p.id !== passageiroEdicao?.id
+  )
+  const responsaveisFiltrados = responsaveisDisponiveis.filter(
+    (resp) => resp.nomeCompleto.toLowerCase().includes(buscaResponsavel.toLowerCase())
   )
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -293,28 +302,55 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
           </div>
 
           {isCriancaColo && (
-            <div className="pt-2">
+            <div className="pt-2 relative">
               <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">
                 Selecione o Responsável <span className="text-red-500">*</span>
               </label>
-              <select
-                required={isCriancaColo}
-                value={responsavelId}
-                onChange={(e) => {
-                  const id = e.target.value
-                  setResponsavelId(id)
-                  const resp = passageiros.find((p) => p.id === id)
-                  setNomeResponsavel(resp ? resp.nomeCompleto : '')
-                }}
-                className="w-full px-4 py-3 bg-brand-light border border-blue-300 rounded-xl focus:border-blue-500 outline-none text-sm font-medium text-brand-dark cursor-pointer"
-              >
-                <option value="">-- Selecione o passageiro responsável --</option>
-                {responsaveisDisponiveis.map((resp) => (
-                  <option key={resp.id} value={resp.id}>
-                    {resp.nomeCompleto} {resp.whatsapp ? `(${formatarWhatsApp(resp.whatsapp)})` : ''}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <input
+                  type="text"
+                  required={isCriancaColo && !responsavelId && !nomeResponsavel}
+                  placeholder="Digite para buscar um responsável pelo nome..."
+                  value={buscaResponsavel || nomeResponsavel || ''}
+                  onFocus={() => setMostrarListaResponsaveis(true)}
+                  onBlur={() => setTimeout(() => setMostrarListaResponsaveis(false), 200)}
+                  onChange={(e) => {
+                    setBuscaResponsavel(e.target.value)
+                    if (responsavelId || nomeResponsavel) {
+                      setResponsavelId('')
+                      setNomeResponsavel('')
+                    }
+                  }}
+                  className="w-full px-4 py-3 bg-brand-light border border-blue-300 rounded-xl focus:border-blue-500 outline-none text-sm font-medium text-brand-dark"
+                />
+                {mostrarListaResponsaveis && (
+                  <ul className="absolute z-50 w-full max-h-60 overflow-y-auto bg-white border border-brand-secondary/20 rounded-xl shadow-lg mt-1 divide-y divide-brand-secondary/10">
+                    {responsaveisFiltrados.length === 0 ? (
+                      <li className="px-4 py-3 text-xs text-brand-dark/50 text-center">
+                        Nenhum responsável disponível com este termo.
+                      </li>
+                    ) : (
+                      responsaveisFiltrados.map((resp) => (
+                        <li
+                          key={resp.id}
+                          onClick={() => {
+                            setResponsavelId(resp.id)
+                            setNomeResponsavel(resp.nomeCompleto)
+                            setBuscaResponsavel('')
+                            setMostrarListaResponsaveis(false)
+                          }}
+                          className="px-4 py-3 text-sm text-brand-dark hover:bg-blue-50 cursor-pointer transition-colors flex items-center justify-between"
+                        >
+                          <span className="font-semibold">{resp.nomeCompleto}</span>
+                          {resp.whatsapp && (
+                            <span className="text-xs text-brand-dark/60 font-mono">{formatarWhatsApp(resp.whatsapp)}</span>
+                          )}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                )}
+              </div>
               {!formData.passeioId && (
                 <p className="text-xs text-amber-600 mt-1">Selecione um passeio primeiro para listar os responsáveis disponíveis.</p>
               )}
