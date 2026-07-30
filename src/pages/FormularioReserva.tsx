@@ -156,10 +156,14 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
     setIsSubmitting(true)
 
     try {
+      // Gera um ID de grupo único para todos os passageiros desta mesma reserva
+      const grupoId = crypto.randomUUID()
+
       // Salva todos os passageiros em lote no Firestore usando Promise.all
       const promises = passageiros.map(async (pax) => {
         // Salva o passageiro
         const paxRef = await addDoc(collection(db, 'passageiros'), {
+          grupoId,
           passeioId,
           nomeCompleto: pax.nomeCompleto,
           dataNascimento: pax.dataNascimento,

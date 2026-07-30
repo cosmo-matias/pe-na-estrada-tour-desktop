@@ -58,6 +58,7 @@ export interface Passeio {
 export interface Passageiro {
   id: string
   passeioId: string
+  grupoId?: string // Agrupamento de reservas conjuntas
   nomeCompleto: string
   dataNascimento: string
   cpf: string

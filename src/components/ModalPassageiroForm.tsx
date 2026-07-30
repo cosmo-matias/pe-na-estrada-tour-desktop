@@ -130,6 +130,7 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
       isCriancaColo,
       nomeResponsavel: isCriancaColo ? nomeResponsavel : '',
       responsavelId: isCriancaColo ? (responsavelId || '') : '',
+      grupoId: passageiroEdicao ? (passageiroEdicao.grupoId || '') : crypto.randomUUID(),
     }
 
     try {

@@ -147,6 +147,29 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
     return () => unsub()
   }, [paxFinanceiro, passeio])
 
+  const agruparPassageiros = (lista: Passageiro[]) => {
+    return Object.values(lista.reduce((acc, p) => {
+      // Regra de retrocompatibilidade: grupoId, senão tenta responsavelId (crianças), senão o próprio ID (legados 1 pessoa)
+      const chaveGrupo = p.grupoId || (p.isCriancaColo ? (p.responsavelId || p.nomeResponsavel) : p.id) || p.id
+      
+      if (!acc[chaveGrupo]) {
+        acc[chaveGrupo] = {
+          chave: chaveGrupo as string,
+          titular: p,
+          passageiros: []
+        }
+      }
+      
+      // Se for o titular (não é criança de colo e id bate com a chave OU o titular atual ainda não foi definido ou é criança)
+      if (!p.isCriancaColo && (p.id === chaveGrupo || !acc[chaveGrupo].titular || acc[chaveGrupo].titular.isCriancaColo)) {
+         acc[chaveGrupo].titular = p
+      }
+      
+      acc[chaveGrupo].passageiros.push(p)
+      return acc
+    }, {} as Record<string, { chave: string; titular: Passageiro; passageiros: Passageiro[] }>))
+  }
+
   if (!aberto || !passeio) return null
 
   const veiculo = passeio.transportes?.find(v => v.id === veiculoSelecionado)
@@ -1015,30 +1038,39 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                   {desalocados.length === 0 ? (
                     <div className="text-center py-10 text-brand-dark/40 text-sm">Nenhum passageiro desalocado.</div>
                   ) : (
-                    desalocados
-                      .map((pax) => (
-                        <div key={pax.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-brand-secondary/20 hover:border-brand-primary/30">
-                          <div className="w-9 h-9 rounded-full bg-brand-secondary/10 flex items-center justify-center text-brand-dark font-bold text-sm shadow-sm">{'—'}</div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1 flex-wrap">
-                                <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
-                                {(pax as any).isAgente && (
-                                  <span className="flex-shrink-0 text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">⭐ AGENTE</span>
-                                )}
-                                {pax.isCriancaColo && (
-                                  <span className="flex-shrink-0 text-[9px] font-bold bg-blue-100 text-blue-700 border border-blue-300 px-1.5 py-0.5 rounded-full" title={pax.nomeResponsavel ? `Responsável: ${pax.nomeResponsavel}` : 'Criança de colo'}>👶 COLO</span>
-                                )}
-                              </div>
-                              <p className="text-brand-dark/50 text-[10px]">{pax.whatsapp}</p>
-                          </div>
-                          <button 
-                            onClick={() => setPaxFinanceiro(pax)}
-                            className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded hover:bg-green-200 transition-colors"
-                          >
-                            💰 Financeiro
-                          </button>
+                    agruparPassageiros(desalocados).map(grupo => (
+                      <div key={grupo.chave} className="mb-4 bg-white rounded-xl border border-brand-secondary/20 shadow-sm overflow-hidden">
+                        <div className="bg-brand-light/50 px-3 py-2 border-b border-brand-secondary/20 flex justify-between items-center">
+                           <span className="text-xs font-bold text-brand-dark/70">Grupo: {grupo.titular.nomeCompleto}</span>
+                           <span className="text-[10px] font-semibold bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full">{grupo.passageiros.length} pessoa(s)</span>
                         </div>
-                      ))
+                        <div className="divide-y divide-brand-secondary/10">
+                          {grupo.passageiros.map((pax) => (
+                            <div key={pax.id} className="flex items-center gap-3 p-3 hover:bg-brand-primary/5 transition-colors">
+                              <div className="w-8 h-8 rounded-full bg-brand-secondary/10 flex items-center justify-center text-brand-dark font-bold text-xs shadow-sm">{'—'}</div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
+                                  {(pax as any).isAgente && (
+                                    <span className="flex-shrink-0 text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">⭐ AGENTE</span>
+                                  )}
+                                  {pax.isCriancaColo && (
+                                    <span className="flex-shrink-0 text-[9px] font-bold bg-blue-100 text-blue-700 border border-blue-300 px-1.5 py-0.5 rounded-full" title={pax.nomeResponsavel ? `Responsável: ${pax.nomeResponsavel}` : 'Criança de colo'}>👶 COLO</span>
+                                  )}
+                                </div>
+                                <p className="text-brand-dark/50 text-[10px]">{pax.whatsapp}</p>
+                              </div>
+                              <button 
+                                onClick={() => setPaxFinanceiro(pax)}
+                                className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded hover:bg-green-200 transition-colors"
+                              >
+                                💰 Fin.
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               )}
@@ -1048,42 +1080,51 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                   {passageirosAlocadosTodos.length === 0 ? (
                     <div className="text-center py-10 text-brand-dark/40 text-sm">Nenhum passageiro alocado.</div>
                   ) : (
-                    passageirosAlocadosTodos
-                      .map((pax) => {
-                        const vNome = passeio.transportes?.find(v => v.id === pax.veiculoAlocado)?.nome || 'Veículo'
-                        return (
-                          <div key={pax.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-brand-secondary/20 hover:border-brand-primary/30">
-                            <div className="w-9 h-9 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-sm shadow-sm">{pax.numeroPoltrona}</div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1 flex-wrap">
-                                <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
-                                {(pax as any).isAgente && (
-                                  <span className="flex-shrink-0 text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">⭐ AGENTE</span>
-                                )}
-                                {pax.isCriancaColo && (
-                                  <span className="flex-shrink-0 text-[9px] font-bold bg-blue-100 text-blue-700 border border-blue-300 px-1.5 py-0.5 rounded-full" title={pax.nomeResponsavel ? `Responsável: ${pax.nomeResponsavel}` : 'Criança de colo'}>👶 COLO</span>
-                                )}
+                    agruparPassageiros(passageirosAlocadosTodos).map(grupo => (
+                      <div key={grupo.chave} className="mb-4 bg-white rounded-xl border border-brand-secondary/20 shadow-sm overflow-hidden">
+                        <div className="bg-brand-light/50 px-3 py-2 border-b border-brand-secondary/20 flex justify-between items-center">
+                           <span className="text-xs font-bold text-brand-dark/70">Grupo: {grupo.titular.nomeCompleto}</span>
+                           <span className="text-[10px] font-semibold bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full">{grupo.passageiros.length} pessoa(s)</span>
+                        </div>
+                        <div className="divide-y divide-brand-secondary/10">
+                          {grupo.passageiros.map((pax) => {
+                            const vNome = passeio.transportes?.find(v => v.id === pax.veiculoAlocado)?.nome || 'Veículo'
+                            return (
+                              <div key={pax.id} className="flex items-center gap-3 p-3 hover:bg-brand-primary/5 transition-colors">
+                                <div className="w-8 h-8 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-xs shadow-sm">{pax.numeroPoltrona}</div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    <p className="text-brand-dark font-semibold text-xs truncate">{pax.nomeCompleto}</p>
+                                    {(pax as any).isAgente && (
+                                      <span className="flex-shrink-0 text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">⭐ AGENTE</span>
+                                    )}
+                                    {pax.isCriancaColo && (
+                                      <span className="flex-shrink-0 text-[9px] font-bold bg-blue-100 text-blue-700 border border-blue-300 px-1.5 py-0.5 rounded-full" title={pax.nomeResponsavel ? `Responsável: ${pax.nomeResponsavel}` : 'Criança de colo'}>👶 COLO</span>
+                                    )}
+                                  </div>
+                                  <p className="text-brand-dark/50 text-[10px] truncate">{pax.whatsapp}</p>
+                                  <span className="inline-block mt-1 px-2 py-0.5 bg-brand-light text-brand-dark/70 text-[10px] font-bold rounded">Assento {pax.numeroPoltrona} • {vNome}</span>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <button 
+                                    onClick={() => setPaxFinanceiro(pax)}
+                                    className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded hover:bg-green-200 transition-colors text-center"
+                                  >
+                                    💰
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDesalocarPassageiro(pax.id)}
+                                    className="px-2 py-1 bg-red-100 text-red-700 text-[10px] font-bold uppercase rounded hover:bg-red-200 transition-colors text-center"
+                                  >
+                                    Rem.
+                                  </button>
+                                </div>
                               </div>
-                              <p className="text-brand-dark/50 text-[10px] truncate">{pax.whatsapp}</p>
-                              <span className="inline-block mt-1 px-2 py-0.5 bg-brand-light text-brand-dark/70 text-[10px] font-bold rounded">Assento {pax.numeroPoltrona} • {vNome}</span>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <button 
-                                onClick={() => setPaxFinanceiro(pax)}
-                                className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded hover:bg-green-200 transition-colors text-center"
-                              >
-                                💰
-                              </button>
-                              <button 
-                                onClick={() => handleDesalocarPassageiro(pax.id)}
-                                className="px-2 py-1 bg-red-100 text-red-700 text-[10px] font-bold uppercase rounded hover:bg-red-200 transition-colors text-center"
-                              >
-                                Remover
-                              </button>
-                            </div>
-                          </div>
-                        )
-                      })
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               )}
