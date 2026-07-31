@@ -257,12 +257,15 @@ export function Passeios() {
                   </div>
                 ) : (
                   cards.map((passeio) => {
-                    const temPassageiros = passageiros.some(p => p.passeioId === passeio.id)
+                    const cadastradosValidos = passageiros.filter(p => p.passeioId === passeio.id && !p.isCriancaColo)
+                    const ocupadas = cadastradosValidos.length
+                    const temPassageiros = cadastradosValidos.length > 0
                     return (
                       <PasseioCard
                         key={passeio.id}
                         passeio={passeio}
                         temPassageiros={temPassageiros}
+                        ocupadas={ocupadas}
                         onGerarLink={handleGerarLink}
                         onAlocar={handleAlocar}
                         onEditar={handleEditar}

@@ -9,6 +9,7 @@ interface PasseioCardProps {
   onExcluir?: (id: string) => void
   onAtivar?: (id: string) => void
   temPassageiros?: boolean
+  ocupadas?: number
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -31,6 +32,7 @@ export function PasseioCard({
   onExcluir,
   onAtivar,
   temPassageiros = false,
+  ocupadas = 0,
 }: PasseioCardProps) {
   const {
     id,
@@ -44,14 +46,12 @@ export function PasseioCard({
     transportes,
     transporte,
     quantidadeTransporte,
-    passageirosAlocados,
     imagem,
   } = passeio
 
   const vagasTotais = passeio.capacidade || (transportes 
     ? transportes.reduce((acc, v) => acc + v.capacidade, 0)
     : (quantidadeTransporte || 1) * 40)
-  const ocupadas = passageirosAlocados || 0
   const porcentagem = vagasTotais > 0 ? Math.round((ocupadas / vagasTotais) * 100) : 0
   const isEsgotado = porcentagem >= 100
 
@@ -76,10 +76,10 @@ export function PasseioCard({
             <p className="text-brand-light/80 text-xs truncate">{local}</p>
           </div>
         </div>
-        {/* Badge de ocupação */}
+        {/* Badge de ocupação (agora reflete cadastros, não assentos) */}
         <div className="absolute top-2.5 right-2.5 bg-brand-dark/70 backdrop-blur-sm rounded-full px-2 py-0.5 flex items-center gap-1">
           <span className="text-xs">👥</span>
-          <span className="text-white text-xs font-semibold">{passageirosAlocados}</span>
+          <span className="text-white text-xs font-semibold">{ocupadas}</span>
         </div>
       </div>
 

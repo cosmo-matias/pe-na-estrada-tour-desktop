@@ -184,6 +184,14 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
   // Lista de passageiros alocados (somente no veículo selecionado)
   const passageirosAlocadosTodos = passageiros.filter(p => p.numeroPoltrona && p.veiculoAlocado === veiculoSelecionado)
 
+  // ── Métricas de Lotação (Reservas) ──────────────────────────────────
+  const cadastradosValidos = passageiros.filter(p => !p.isCriancaColo)
+  const ocupadosVendidos = cadastradosValidos.length
+  const vagasTotaisPasseio = passeio.capacidade || (passeio.transportes 
+    ? passeio.transportes.reduce((acc, v) => acc + v.capacidade, 0)
+    : (passeio.quantidadeTransporte || 1) * 40)
+  const vagasLivresPasseio = Math.max(0, vagasTotaisPasseio - ocupadosVendidos)
+
   // ── Helpers Financeiros ─────────────────────────────────────────────
   const calcularSaldoDevedor = () => {
     if (!paxFinanceiro || !transacaoPax) return 0
@@ -751,10 +759,20 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex gap-2">
-              <span className="px-2 py-1 rounded-full bg-green-600/20 text-green-400 text-xs font-semibold">{livres} livres</span>
-              <span className="px-2 py-1 rounded-full bg-gray-600/20 text-gray-300 text-xs font-semibold">{total - livres} ocupados</span>
-              <span className="px-2 py-1 rounded-full bg-brand-primary/30 text-brand-secondary text-xs font-semibold">{total} total</span>
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold text-brand-secondary/70 tracking-wider">Lotação (Passeio)</span>
+                <span className="px-2 py-1 rounded-full bg-green-600/20 text-green-400 text-xs font-semibold">{vagasLivresPasseio} livres</span>
+                <span className="px-2 py-1 rounded-full bg-brand-primary/30 text-brand-secondary text-xs font-semibold">{ocupadosVendidos} vendidos</span>
+              </div>
+              
+              {veiculo && (
+                <div className="flex items-center gap-2 border-l border-white/20 pl-4">
+                  <span className="text-[10px] uppercase font-bold text-brand-secondary/70 tracking-wider">Assentos ({veiculo.nome})</span>
+                  <span className="px-2 py-1 rounded-full bg-gray-600/20 text-gray-300 text-xs font-semibold">{total - livres} marcados</span>
+                  <span className="px-2 py-1 rounded-full bg-brand-primary/30 text-brand-secondary text-xs font-semibold">{total} total</span>
+                </div>
+              )}
             </div>
             <button onClick={onFechar} className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white text-lg">
               ✕
