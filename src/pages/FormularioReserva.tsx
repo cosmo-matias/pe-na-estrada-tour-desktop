@@ -20,6 +20,8 @@ interface PassengerFormData {
   }
   pontoEmbarque: string
   formaPagamento: FormaPagamento
+  isCriancaColo?: boolean
+  nomeResponsavel?: string
 }
 
 const initialPassenger: PassengerFormData = {
@@ -36,6 +38,8 @@ const initialPassenger: PassengerFormData = {
   },
   pontoEmbarque: '',
   formaPagamento: 'pix',
+  isCriancaColo: false,
+  nomeResponsavel: '',
 }
 
 const formatCPF = (value: string) => {
@@ -173,6 +177,8 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
           endereco: pax.endereco,
           pontoEmbarque: pax.pontoEmbarque,
           formaPagamento: pax.formaPagamento,
+          isCriancaColo: pax.isCriancaColo,
+          nomeResponsavel: pax.nomeResponsavel,
           statusAlocacao: 'nao_alocado',
           numeroPoltrona: null,
           veiculoAlocado: null,
@@ -384,6 +390,41 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                           className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
                         />
                       </div>
+                      
+                    {/* Criança de Colo */}
+                    <div className="flex flex-col gap-3 p-4 bg-brand-light/50 rounded-xl border border-brand-secondary/20">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={pax.isCriancaColo}
+                          onChange={(e) => {
+                            const novos = [...passageiros]
+                            novos[idx] = { ...novos[idx], isCriancaColo: e.target.checked }
+                            setPassageiros(novos)
+                          }}
+                          className="w-5 h-5 rounded border-brand-secondary/50 text-brand-primary focus:ring-brand-primary/20"
+                        />
+                        <span className="text-sm font-bold text-brand-dark">Criança de Colo (Não ocupa poltrona)</span>
+                      </label>
+                      {pax.isCriancaColo && (
+                        <div className="flex flex-col gap-1.5 mt-2">
+                          <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/70">Nome do Responsável</label>
+                          <input
+                            required={pax.isCriancaColo}
+                            type="text"
+                            value={pax.nomeResponsavel || ''}
+                            onChange={(e) => {
+                              const novos = [...passageiros]
+                              novos[idx] = { ...novos[idx], nomeResponsavel: e.target.value }
+                              setPassageiros(novos)
+                            }}
+                            placeholder="Ex: Maria da Silva"
+                            className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                          />
+                        </div>
+                      )}
+                    </div>
+
                       <div className="grid grid-cols-2 gap-5">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/70">Cidade</label>

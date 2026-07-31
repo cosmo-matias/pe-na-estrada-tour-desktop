@@ -638,7 +638,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
         p.isCriancaColo && (p.responsavelId === paxId || (!p.responsavelId && p.nomeResponsavel && p.nomeResponsavel === pax?.nomeCompleto))
       ) : []
 
-      let incrementAlocados = !pax?.numeroPoltrona ? 1 : 0
+      let incrementAlocados = (!pax?.numeroPoltrona && !pax?.isCriancaColo) ? 1 : 0
       const idsAtualizados = new Set([paxId])
 
       for (const crianca of criancasVinculadas) {
@@ -646,9 +646,6 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
           numeroPoltrona: destino,
           veiculoAlocado: veiculoSelecionado
         })
-        if (!crianca.numeroPoltrona) {
-          incrementAlocados += 1
-        }
         idsAtualizados.add(crianca.id)
       }
 
@@ -693,7 +690,7 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
         veiculoAlocado: null
       })
 
-      let decremento = pax?.numeroPoltrona ? 1 : 0
+      let decremento = (pax?.numeroPoltrona && !pax?.isCriancaColo) ? 1 : 0
       const idsLimpos = new Set([paxId])
 
       for (const crianca of criancasVinculadas) {
@@ -702,7 +699,6 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
             numeroPoltrona: null,
             veiculoAlocado: null
           })
-          decremento += 1
           idsLimpos.add(crianca.id)
         }
       }
@@ -984,6 +980,9 @@ export function ModalAlocacao({ passeio, aberto, onFechar }: ModalAlocacaoProps)
                                  <p className="font-bold text-xs truncate text-brand-dark">{pax.nomeCompleto}</p>
                                  {(pax as any).isAgente && (
                                    <span className="flex-shrink-0 text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">⭐ AGENTE</span>
+                                 )}
+                                 {pax.isCriancaColo && (
+                                   <span className="flex-shrink-0 text-[9px] font-bold bg-blue-100 text-blue-700 border border-blue-300 px-1.5 py-0.5 rounded-full" title={pax.nomeResponsavel ? `Responsável: ${pax.nomeResponsavel}` : 'Criança de colo'}>👶 COLO</span>
                                  )}
                                </div>
                                <p className="text-[10px] text-brand-dark/60 truncate">{pax.whatsapp}</p>

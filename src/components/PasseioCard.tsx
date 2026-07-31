@@ -48,6 +48,12 @@ export function PasseioCard({
     imagem,
   } = passeio
 
+  const vagasTotais = passeio.capacidade || (transportes 
+    ? transportes.reduce((acc, v) => acc + v.capacidade, 0)
+    : (quantidadeTransporte || 1) * 40)
+  const ocupadas = passageirosAlocados || 0
+  const porcentagem = vagasTotais > 0 ? Math.round((ocupadas / vagasTotais) * 100) : 0
+  const isEsgotado = porcentagem >= 100
 
   return (
     <article className="bg-white rounded-2xl shadow-sm border border-brand-secondary/20 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
@@ -121,6 +127,22 @@ export function PasseioCard({
               </li>
             ))}
           </ul>
+        </div>
+
+        {/* ── Barra de Progresso (Ocupação) ── */}
+        <div className="mt-2 flex flex-col gap-1.5">
+          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+            <span className={isEsgotado ? 'text-red-500' : 'text-brand-dark/60'}>
+              {isEsgotado ? 'Esgotado' : `${porcentagem}% Preenchido`}
+            </span>
+            <span className="text-brand-dark/40">{ocupadas} de {vagasTotais} vagas</span>
+          </div>
+          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className={`h-full transition-all duration-500 ${isEsgotado ? 'bg-red-500' : 'bg-orange-500'}`} 
+              style={{ width: `${Math.min(porcentagem, 100)}%` }}
+            ></div>
+          </div>
         </div>
       </div>
 
