@@ -5,6 +5,7 @@ import type { Passeio } from '../types'
 import { PasseioCard } from '../components/PasseioCard'
 import { ModalAlocacao } from '../components/ModalAlocacao'
 import { ModalPasseio } from '../components/ModalPasseio'
+import { ModalSlideshow } from '../components/ModalSlideshow'
 
 // ── Configuração das colunas do Kanban ───────────────────────────────
 type StatusKanban = Passeio['status']
@@ -79,6 +80,9 @@ export function Passeios() {
   const [modalPasseioAberto, setModalPasseioAberto] = useState(false)
   const [passeioParaEditar, setPasseioParaEditar] = useState<Passeio | undefined>(undefined)
 
+  // ── Estado do Modal de Slideshow ───────────────────────────────────
+  const [modalSlideshowAberto, setModalSlideshowAberto] = useState(false)
+
   // ── Handlers ──────────────────────────────────────────────────────
   const handleGerarLink = (id: string) => {
     const url = `https://pe-na-estrada-tour.web.app/reserva/${id}`
@@ -133,6 +137,15 @@ export function Passeios() {
     }
   }
 
+  const handleToggleVitrine = async (id: string, novoStatus: boolean) => {
+    try {
+      await updateDoc(doc(db, 'passeios', id), { ativo: novoStatus })
+    } catch (error) {
+      console.error(error)
+      alert("Erro ao alterar visibilidade na vitrine.")
+    }
+  }
+
   const handleExcluir = async (id: string) => {
     const passeio = passeios.find((p) => p.id === id)
     if (!passeio) return
@@ -176,6 +189,12 @@ export function Passeios() {
         passeioEdicao={passeioParaEditar}
       />
 
+      {/* ── Modal de Slideshow ── */}
+      <ModalSlideshow
+        aberto={modalSlideshowAberto}
+        onFechar={() => setModalSlideshowAberto(false)}
+      />
+
       {/* ── Cabeçalho do Módulo ── */}
       <div className="flex items-center justify-between">
         <div>
@@ -188,17 +207,26 @@ export function Passeios() {
           </p>
         </div>
 
-        <button
-          id="btn-adicionar-passeio"
-          className="flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white font-semibold text-sm rounded-xl shadow-md shadow-brand-primary/30 hover:bg-brand-primary/85 hover:-translate-y-0.5 transition-all duration-200"
-          onClick={() => {
-            setPasseioParaEditar(undefined)
-            setModalPasseioAberto(true)
-          }}
-        >
-          <span className="text-base">＋</span>
-          Adicionar Novo Passeio
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setModalSlideshowAberto(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand-secondary text-brand-dark font-semibold text-sm rounded-xl shadow-sm border border-brand-secondary/30 hover:bg-brand-secondary/80 transition-all duration-200"
+          >
+            <span>🖼️</span> Gerenciar Vitrine/Capa
+          </button>
+          
+          <button
+            id="btn-adicionar-passeio"
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white font-semibold text-sm rounded-xl shadow-md shadow-brand-primary/30 hover:bg-brand-primary/85 hover:-translate-y-0.5 transition-all duration-200"
+            onClick={() => {
+              setPasseioParaEditar(undefined)
+              setModalPasseioAberto(true)
+            }}
+          >
+            <span className="text-base">＋</span>
+            Adicionar Novo Passeio
+          </button>
+        </div>
       </div>
 
       {/* ── Cards de Resumo ── */}
@@ -272,6 +300,7 @@ export function Passeios() {
                         onCancelar={handleCancelar}
                         onExcluir={handleExcluir}
                         onAtivar={handleAtivar}
+                        onToggleVitrine={handleToggleVitrine}
                       />
                     )
                   })

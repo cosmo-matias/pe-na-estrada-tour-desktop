@@ -92,7 +92,7 @@ export function Leads() {
               <tbody className="divide-y divide-brand-secondary/10">
                 {leads.map((lead) => {
                   const numeroLimpo = limparNumeroWhatsApp(lead.whatsapp)
-                  const waLink = \`https://wa.me/55\${numeroLimpo}\`
+                  const waLink = `https://wa.me/55${numeroLimpo}`
                   
                   return (
                     <tr key={lead.id} className="hover:bg-brand-light/30 transition-colors">

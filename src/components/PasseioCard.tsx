@@ -7,7 +7,8 @@ interface PasseioCardProps {
   onEditar?: (id: string) => void
   onCancelar?: (id: string) => void
   onExcluir?: (id: string) => void
-  onAtivar?: (id: string) => void
+  onAtivar?: (id: string) => void // Ativar cancelado
+  onToggleVitrine?: (id: string, novoStatus: boolean) => void // Ativar/Desativar da vitrine
   temPassageiros?: boolean
   ocupadas?: number
 }
@@ -31,6 +32,7 @@ export function PasseioCard({
   onCancelar,
   onExcluir,
   onAtivar,
+  onToggleVitrine,
   temPassageiros = false,
   ocupadas = 0,
 }: PasseioCardProps) {
@@ -54,9 +56,10 @@ export function PasseioCard({
     : (quantidadeTransporte || 1) * 40)
   const porcentagem = vagasTotais > 0 ? Math.round((ocupadas / vagasTotais) * 100) : 0
   const isEsgotado = porcentagem >= 100
+  const isOcultoVitrine = passeio.ativo === false
 
   return (
-    <article className="bg-white rounded-2xl shadow-sm border border-brand-secondary/20 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
+    <article className={`bg-white rounded-2xl shadow-sm border ${isOcultoVitrine ? 'border-brand-secondary/40 opacity-75' : 'border-brand-secondary/20'} overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col`}>
 
       {/* ── Imagem do Destino ── */}
       <div className="relative h-56 overflow-hidden">
@@ -71,7 +74,12 @@ export function PasseioCard({
         />
         {/* Overlay com destino */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-3">
-          <div>
+          <div className="w-full">
+            {isOcultoVitrine && (
+              <span className="inline-block px-2 py-0.5 bg-brand-secondary/80 backdrop-blur text-white text-[10px] font-bold uppercase rounded-md mb-1">
+                Oculto no Site
+              </span>
+            )}
             <p className="text-white font-bold text-base leading-tight">{destino}</p>
             <p className="text-brand-light/80 text-xs truncate">{local}</p>
           </div>
@@ -203,6 +211,22 @@ export function PasseioCard({
             </button>
           )}
         </div>
+        
+        {/* Linha 3: Toggle Vitrine */}
+        <button
+          onClick={() => onToggleVitrine?.(id, !passeio.ativo)}
+          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors mt-1
+            ${passeio.ativo === false 
+              ? 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100' 
+              : 'bg-brand-secondary/5 border-brand-secondary/20 text-brand-secondary hover:bg-brand-secondary/10'
+            }`}
+        >
+          {passeio.ativo === false ? (
+            <><span>👁️</span> Mostrar na Vitrine</>
+          ) : (
+            <><span>🙈</span> Ocultar da Vitrine</>
+          )}
+        </button>
       </div>
     </article>
   )

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import type { Passeio, TransporteFrota, TipoTransporte } from '../types'
+import { uploadToImgBB } from '../services/imgbb'
 
 interface ModalPasseioProps {
   aberto: boolean
@@ -20,8 +21,11 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
     valorFormatado: '',
     locaisEmbarque: [] as string[],
     imagem: '',
+    descricaoVitrine: '',
+    ativo: true,
   })
   
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [linhasFrota, setLinhasFrota] = useState<{ tipo: TipoTransporte, quantidade: number }[]>([{ tipo: 'Onibus 50', quantidade: 1 }])
   const [despesas, setDespesas] = useState<{ descricao: string; valor: string }[]>([])
 
@@ -36,6 +40,8 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         valorFormatado: passeioEdicao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         locaisEmbarque: passeioEdicao.locaisEmbarque || [],
         imagem: passeioEdicao.imagem || '',
+        descricaoVitrine: passeioEdicao.descricaoVitrine || '',
+        ativo: passeioEdicao.ativo !== false, // default true
       })
       if (passeioEdicao.transportes && passeioEdicao.transportes.length > 0) {
         const contagem: Record<string, number> = {}
@@ -66,6 +72,8 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         valorFormatado: '',
         locaisEmbarque: [],
         imagem: '',
+        descricaoVitrine: '',
+        ativo: true,
       })
       setLinhasFrota([{ tipo: 'Onibus 50', quantidade: 1 }])
       setDespesas([])
@@ -123,7 +131,9 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         valor: Number(d.valor.replace(/\./g, '').replace(',', '.')) || 0
       })),
       status: passeioEdicao ? passeioEdicao.status : 'a_realizar',
-      passageirosAlocados: passeioEdicao ? passeioEdicao.passageirosAlocados : 0
+      passageirosAlocados: passeioEdicao ? passeioEdicao.passageirosAlocados : 0,
+      descricaoVitrine: formData.descricaoVitrine,
+      ativo: formData.ativo
     }
 
     try {
@@ -192,8 +202,63 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
               <input type="text" required value={formData.valorFormatado} onChange={handleValorChange} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" placeholder="Ex: 250,00" />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">URL da Imagem</label>
-              <input type="url" value={formData.imagem} onChange={e => setFormData({ ...formData, imagem: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" placeholder="https://..." />
+              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Imagem de Capa (Vitrine)</label>
+              <div className="flex items-center gap-3">
+                <label className={`flex-1 px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus-within:border-brand-primary cursor-pointer text-sm transition-all ${uploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <span className="text-brand-dark/70 truncate block">
+                    {uploadingImage ? 'Enviando...' : (formData.imagem ? 'Imagem Selecionada (Trocar)' : 'Selecionar Imagem')}
+                  </span>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    disabled={uploadingImage}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      setUploadingImage(true)
+                      try {
+                        const url = await uploadToImgBB(file)
+                        setFormData({ ...formData, imagem: url })
+                      } catch (err) {
+                        alert('Erro ao fazer upload da imagem.')
+                      } finally {
+                        setUploadingImage(false)
+                      }
+                    }} 
+                    className="hidden" 
+                  />
+                </label>
+                {formData.imagem && (
+                  <img src={formData.imagem} alt="Capa" className="w-12 h-12 object-cover rounded-lg border border-brand-secondary/30" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-brand-secondary/20">
+            <h4 className="font-bold text-brand-dark text-sm mb-3">Configurações da Vitrine Pública</h4>
+            
+            <div className="mb-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.ativo}
+                  onChange={e => setFormData({ ...formData, ativo: e.target.checked })}
+                  className="w-5 h-5 rounded border-brand-secondary/50 text-brand-primary focus:ring-brand-primary/20"
+                />
+                <span className="text-sm font-bold text-brand-dark">Passeio Ativo (Aparecer no site público)</span>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Descrição Completa (Vitrine)</label>
+              <textarea 
+                rows={3} 
+                value={formData.descricaoVitrine} 
+                onChange={e => setFormData({ ...formData, descricaoVitrine: e.target.value })} 
+                className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm resize-none" 
+                placeholder="Descreva os detalhes do passeio, roteiro, etc..."
+              />
             </div>
           </div>
 

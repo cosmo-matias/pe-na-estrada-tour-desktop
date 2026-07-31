@@ -52,6 +52,10 @@ export interface Passeio {
   imagem: string
   layoutTransporte?: LayoutTransporte
   despesas?: { descricao: string; valor: number }[]
+  // Vitrine web
+  ativo?: boolean
+  tituloVitrine?: string
+  descricaoVitrine?: string
 }
 
 // ── Passageiro ────────────────────────────────────────────────────────
