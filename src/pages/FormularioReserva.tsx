@@ -51,6 +51,19 @@ const formatCPF = (value: string) => {
     .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
 }
 
+const calcularIdade = (dataNascimento: string): number => {
+  if (!dataNascimento) return 999
+  const [ano, mes, dia] = dataNascimento.split('-').map(Number)
+  if (!ano || !mes || !dia) return 999
+  const hoje = new Date()
+  let idade = hoje.getFullYear() - ano
+  const m = (hoje.getMonth() + 1) - mes
+  if (m < 0 || (m === 0 && hoje.getDate() < dia)) {
+    idade--
+  }
+  return idade
+}
+
 const formatWhatsApp = (value: string) => {
   let v = value.replace(/\D/g, '')
   if (v.length > 11) v = v.slice(0, 11)
@@ -130,7 +143,18 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
 
     setPassageiros((prev) => {
       const newArr = [...prev]
-      newArr[index] = { ...newArr[index], [name]: value }
+      const updatedPax = { ...newArr[index], [name]: value }
+      
+      if (name === 'dataNascimento') {
+        const idade = calcularIdade(value)
+        if (idade <= 3) {
+          updatedPax.isCriancaColo = true
+        } else if (idade > 3 && idade !== 999) {
+          updatedPax.isCriancaColo = false
+        }
+      }
+      
+      newArr[index] = updatedPax
       return newArr
     })
   }
@@ -397,14 +421,20 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                         <input
                           type="checkbox"
                           checked={pax.isCriancaColo}
+                          disabled={calcularIdade(pax.dataNascimento) <= 3}
                           onChange={(e) => {
                             const novos = [...passageiros]
                             novos[idx] = { ...novos[idx], isCriancaColo: e.target.checked }
                             setPassageiros(novos)
                           }}
-                          className="w-5 h-5 rounded border-brand-secondary/50 text-brand-primary focus:ring-brand-primary/20"
+                          className="w-5 h-5 rounded border-brand-secondary/50 text-brand-primary focus:ring-brand-primary/20 disabled:opacity-50"
                         />
-                        <span className="text-sm font-bold text-brand-dark">Criança de Colo (Não ocupa poltrona)</span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-brand-dark">Criança de Colo (Não ocupa poltrona)</span>
+                          {calcularIdade(pax.dataNascimento) <= 3 && (
+                            <span className="text-[10px] text-brand-primary font-semibold">Marcado automaticamente pela idade</span>
+                          )}
+                        </div>
                       </label>
                       {pax.isCriancaColo && (
                         <div className="flex flex-col gap-1.5 mt-2">

@@ -19,6 +19,19 @@ function formatarCPF(value: string): string {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
 }
 
+const calcularIdade = (dataNascimento: string): number => {
+  if (!dataNascimento) return 999
+  const [ano, mes, dia] = dataNascimento.split('-').map(Number)
+  if (!ano || !mes || !dia) return 999
+  const hoje = new Date()
+  let idade = hoje.getFullYear() - ano
+  const m = (hoje.getMonth() + 1) - mes
+  if (m < 0 || (m === 0 && hoje.getDate() < dia)) {
+    idade--
+  }
+  return idade
+}
+
 interface ModalPassageiroFormProps {
   aberto: boolean
   onFechar: () => void
@@ -200,7 +213,16 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Data Nascimento</label>
-              <input type="date" required value={formData.dataNascimento} onChange={e => setFormData({ ...formData, dataNascimento: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" />
+              <input type="date" required value={formData.dataNascimento} onChange={e => {
+                const value = e.target.value
+                setFormData({ ...formData, dataNascimento: value })
+                const idade = calcularIdade(value)
+                if (idade <= 3) {
+                  setIsCriancaColo(true)
+                } else if (idade > 3 && idade !== 999) {
+                  setIsCriancaColo(false)
+                }
+              }} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm" />
             </div>
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">WhatsApp</label>
@@ -292,11 +314,17 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
                 type="checkbox"
                 id="check-is-crianca-colo"
                 checked={isCriancaColo}
+                disabled={calcularIdade(formData.dataNascimento) <= 3}
                 onChange={e => setIsCriancaColo(e.target.checked)}
-                className="w-4 h-4 accent-blue-500 cursor-pointer"
+                className="w-4 h-4 accent-blue-500 cursor-pointer disabled:opacity-50"
               />
               <div>
-                <p className="text-sm font-bold text-blue-800">👶 É criança de colo?</p>
+                <p className="text-sm font-bold text-blue-800 flex items-center gap-2">
+                  👶 É criança de colo?
+                  {calcularIdade(formData.dataNascimento) <= 3 && (
+                    <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Automático (Idade)</span>
+                  )}
+                </p>
                 <p className="text-xs text-blue-600">Compartilha o assento com um responsável. O WhatsApp informado será o do responsável.</p>
               </div>
             </label>
