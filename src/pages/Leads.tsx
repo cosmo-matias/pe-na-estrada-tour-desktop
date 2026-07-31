@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore'
+import { collection, query, onSnapshot } from 'firebase/firestore'
 import { db } from '../config/firebase'
 
 interface Lead {
@@ -15,12 +15,19 @@ export function Leads() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const q = query(collection(db, 'leads'), orderBy('dataCadastro', 'desc'))
+    const q = query(collection(db, 'leads'))
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data: Lead[] = []
       snapshot.forEach((doc) => {
         data.push({ id: doc.id, ...doc.data() } as Lead)
       })
+      
+      data.sort((a, b) => {
+        const timeA = a.dataCadastro ? new Date(a.dataCadastro).getTime() : 0
+        const timeB = b.dataCadastro ? new Date(b.dataCadastro).getTime() : 0
+        return timeB - timeA
+      })
+      
       setLeads(data)
       setLoading(false)
     }, (error) => {
