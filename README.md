@@ -10,17 +10,17 @@ Sistema completo de gestão de passeios, alocação inteligente de passageiros n
 - **Tailwind CSS**: Estilização utilitária moderna e responsiva.
 
 ## Funcionalidades
-- **Gestão de Frota Mista**: Criação de passeios utilizando diferentes tipos e quantidades de veículos.
-- **Mapa de Alocação Interativo**: Distribuição visual de passageiros nas poltronas, com filtros inteligentes de alocados e desalocados.
-- **Geração de Relatórios**: Exportação de PDFs profissionais (Resumo e Detalhado) utilizando tabelas automáticas e segregação por veículo.
-- **Controle Financeiro**: Acompanhamento dinâmico da receita, custos e margem de lucro por passeio e em nível global.
-- **Segurança de Acesso**: Proteção das rotas internas via Google Auth atrelada a uma *allowlist* rígida de administradores.
-- **Formulário de Inscrição Público**: Link de captação de clientes integrado diretamente com o banco de dados.
-- **Sistema Dinâmico de Agentes**: Identificação visual e separação de Guias/Agentes de Turismo por veículo.
-- **Gestão de Crianças de Colo**: Alocação de assento compartilhado (Adulto + Bebê) com listagem separada para controle seguro do guia.
-- **Relatórios Inteligentes em PDF**: Geração de listas de embarque detalhadas e resumos, segregadas por veículo, agentes responsáveis e crianças de colo.
-- **Otimização para Redes Sociais (Open Graph)**: Link público de reservas preparado com preview visual personalizado para compartilhamento no WhatsApp.
-- **Validação e Máscaras de Dados**: Formulários internos protegidos com formatação automática de CPF, WhatsApp e UF.
+
+- **Infraestrutura de Imagens:** Integração com a API do ImgBB para upload e hospedagem gratuita de imagens, substituindo o Firebase Storage.
+- **Vitrine Pública (Client-Facing):** Modal de Detalhes dinâmico para os passeios (com descrição completa, expansão de imagem e redirecionamento de reserva direto para o WhatsApp oficial). Formulário de Inscrição Público com link de captação de clientes integrado diretamente com o banco de dados. Otimização para Redes Sociais (Open Graph) para compartilhamento no WhatsApp.
+- **Painel Administrativo (CMS):** Sistema completo de Edição de Passeios e Gerenciador de Slideshow dinâmico gravado no Firestore para a capa do site. Segurança de Acesso com rotas internas protegidas via Google Auth e allowlist de administradores. Validação e Máscaras de Dados para CPF, WhatsApp e UF.
+- **Motor de Alocação e Logística Avançada:** 
+  - Gestão de Frota Mista com criação de passeios utilizando diferentes tipos e quantidades de veículos.
+  - Agrupamento visual inteligente de famílias e dependentes (`grupoId`) no mapa de assentos.
+  - Automação de Crianças de Colo: Cálculo de idade em tempo real (<= 3 anos), isenção na contagem de lotação do veículo e identificação visual (👶) nas listas. Alocação de assento compartilhado (Adulto + Bebê) com listagem separada para controle seguro do guia.
+  - Sistema de Taxa de Ocupação Real ancorado no total de cadastros pagantes, com barra de progresso visual.
+  - Sistema Dinâmico de Agentes com identificação visual e separação de Guias/Agentes de Turismo por veículo.
+- **Módulos de Gestão:** Painel Financeiro integrado para acompanhamento dinâmico da receita, custos e margem de lucro. Exportação inteligente de listas de passageiros em PDF (Resumo e Detalhado) utilizando tabelas automáticas, segregadas por veículo, agentes responsáveis e crianças de colo.
 
 ## Instruções de Deploy
 
