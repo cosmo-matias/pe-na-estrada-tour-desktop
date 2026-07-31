@@ -21,9 +21,16 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
     valorFormatado: '',
     locaisEmbarque: [] as string[],
     imagem: '',
-    descricaoVitrine: '',
+    descricao: '',
     ativo: true,
   })
+  
+  const [inclusos, setInclusos] = useState<string[]>([])
+  const [novoIncluso, setNovoIncluso] = useState('')
+  const [naoInclusos, setNaoInclusos] = useState<string[]>([])
+  const [novoNaoIncluso, setNovoNaoIncluso] = useState('')
+  const [roteiro, setRoteiro] = useState<{ horario: string; evento: string }[]>([])
+  const [novoRoteiro, setNovoRoteiro] = useState({ horario: '', evento: '' })
   
   const [uploadingImage, setUploadingImage] = useState(false)
   const [linhasFrota, setLinhasFrota] = useState<{ tipo: TipoTransporte, quantidade: number }[]>([{ tipo: 'Onibus 50', quantidade: 1 }])
@@ -40,9 +47,12 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         valorFormatado: passeioEdicao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         locaisEmbarque: passeioEdicao.locaisEmbarque || [],
         imagem: passeioEdicao.imagem || '',
-        descricaoVitrine: passeioEdicao.descricaoVitrine || '',
+        descricao: passeioEdicao.descricao || '',
         ativo: passeioEdicao.ativo !== false, // default true
       })
+      setInclusos(passeioEdicao.inclusos || [])
+      setNaoInclusos(passeioEdicao.naoInclusos || [])
+      setRoteiro(passeioEdicao.roteiro || [])
       if (passeioEdicao.transportes && passeioEdicao.transportes.length > 0) {
         const contagem: Record<string, number> = {}
         passeioEdicao.transportes.forEach(t => {
@@ -72,11 +82,14 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
         valorFormatado: '',
         locaisEmbarque: [],
         imagem: '',
-        descricaoVitrine: '',
+        descricao: '',
         ativo: true,
       })
       setLinhasFrota([{ tipo: 'Onibus 50', quantidade: 1 }])
       setDespesas([])
+      setInclusos([])
+      setNaoInclusos([])
+      setRoteiro([])
     }
   }, [passeioEdicao, aberto])
 
@@ -132,7 +145,10 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
       })),
       status: passeioEdicao ? passeioEdicao.status : 'a_realizar',
       passageirosAlocados: passeioEdicao ? passeioEdicao.passageirosAlocados : 0,
-      descricaoVitrine: formData.descricaoVitrine,
+      descricao: formData.descricao,
+      inclusos,
+      naoInclusos,
+      roteiro,
       ativo: formData.ativo
     }
 
@@ -250,15 +266,76 @@ export function ModalPasseio({ aberto, onFechar, passeioEdicao }: ModalPasseioPr
               </label>
             </div>
 
-            <div>
+            <div className="mb-4">
               <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Descrição Completa (Vitrine)</label>
               <textarea 
                 rows={3} 
-                value={formData.descricaoVitrine} 
-                onChange={e => setFormData({ ...formData, descricaoVitrine: e.target.value })} 
+                value={formData.descricao} 
+                onChange={e => setFormData({ ...formData, descricao: e.target.value })} 
                 className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm resize-none" 
                 placeholder="Descreva os detalhes do passeio, roteiro, etc..."
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {/* Inclusos */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">O que está incluso</label>
+                <div className="flex gap-2 mb-2">
+                  <input type="text" value={novoIncluso} onChange={e => setNovoIncluso(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (novoIncluso.trim()) { setInclusos([...inclusos, novoIncluso.trim()]); setNovoIncluso(''); } } }} className="flex-1 px-3 py-2 bg-brand-light border border-brand-secondary/30 rounded-lg outline-none text-sm" placeholder="Ex: Transporte" />
+                  <button type="button" onClick={() => { if (novoIncluso.trim()) { setInclusos([...inclusos, novoIncluso.trim()]); setNovoIncluso(''); } }} className="px-3 bg-brand-primary/10 text-brand-primary rounded-lg font-bold text-sm hover:bg-brand-primary/20">Add</button>
+                </div>
+                <ul className="space-y-1">
+                  {inclusos.map((item, i) => (
+                    <li key={i} className="flex items-center justify-between bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-xs">
+                      <span>✓ {item}</span>
+                      <button type="button" onClick={() => setInclusos(inclusos.filter((_, idx) => idx !== i))} className="text-red-500 hover:text-red-700 font-bold">✕</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Nao Inclusos */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">O que NÃO está incluso</label>
+                <div className="flex gap-2 mb-2">
+                  <input type="text" value={novoNaoIncluso} onChange={e => setNovoNaoIncluso(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (novoNaoIncluso.trim()) { setNaoInclusos([...naoInclusos, novoNaoIncluso.trim()]); setNovoNaoIncluso(''); } } }} className="flex-1 px-3 py-2 bg-brand-light border border-brand-secondary/30 rounded-lg outline-none text-sm" placeholder="Ex: Alimentação" />
+                  <button type="button" onClick={() => { if (novoNaoIncluso.trim()) { setNaoInclusos([...naoInclusos, novoNaoIncluso.trim()]); setNovoNaoIncluso(''); } }} className="px-3 bg-brand-primary/10 text-brand-primary rounded-lg font-bold text-sm hover:bg-brand-primary/20">Add</button>
+                </div>
+                <ul className="space-y-1">
+                  {naoInclusos.map((item, i) => (
+                    <li key={i} className="flex items-center justify-between bg-red-50 text-red-700 px-2 py-1 rounded text-xs">
+                      <span>✕ {item}</span>
+                      <button type="button" onClick={() => setNaoInclusos(naoInclusos.filter((_, idx) => idx !== i))} className="text-red-500 hover:text-red-700 font-bold">✕</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Roteiro */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Roteiro (Timeline)</label>
+              <div className="flex gap-2 mb-3 items-end">
+                <div className="w-24">
+                  <label className="block text-[10px] font-bold text-brand-dark/50 mb-1">Horário</label>
+                  <input type="time" value={novoRoteiro.horario} onChange={e => setNovoRoteiro({ ...novoRoteiro, horario: e.target.value })} className="w-full px-2 py-2 bg-brand-light border border-brand-secondary/30 rounded-lg outline-none text-sm" />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold text-brand-dark/50 mb-1">Evento</label>
+                  <input type="text" value={novoRoteiro.evento} onChange={e => setNovoRoteiro({ ...novoRoteiro, evento: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (novoRoteiro.horario && novoRoteiro.evento) { setRoteiro([...roteiro, { ...novoRoteiro }].sort((a,b)=>a.horario.localeCompare(b.horario))); setNovoRoteiro({ horario: '', evento: '' }); } } }} className="w-full px-3 py-2 bg-brand-light border border-brand-secondary/30 rounded-lg outline-none text-sm" placeholder="Ex: Embarque Principal" />
+                </div>
+                <button type="button" onClick={() => { if (novoRoteiro.horario && novoRoteiro.evento) { setRoteiro([...roteiro, { ...novoRoteiro }].sort((a,b)=>a.horario.localeCompare(b.horario))); setNovoRoteiro({ horario: '', evento: '' }); } }} className="px-4 py-2 bg-brand-primary/10 text-brand-primary rounded-lg font-bold text-sm hover:bg-brand-primary/20 h-[38px]">Add</button>
+              </div>
+              <ul className="space-y-2">
+                {roteiro.map((item, i) => (
+                  <li key={i} className="flex items-center gap-3 bg-white border border-brand-secondary/20 px-3 py-2 rounded-lg text-sm">
+                    <span className="font-bold text-brand-primary">{item.horario}</span>
+                    <span className="flex-1 text-brand-dark/80">{item.evento}</span>
+                    <button type="button" onClick={() => setRoteiro(roteiro.filter((_, idx) => idx !== i))} className="text-red-500 hover:bg-red-50 rounded p-1">🗑️</button>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 

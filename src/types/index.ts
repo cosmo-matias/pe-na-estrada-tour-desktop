@@ -55,7 +55,10 @@ export interface Passeio {
   // Vitrine web
   ativo?: boolean
   tituloVitrine?: string
-  descricaoVitrine?: string
+  descricao?: string
+  inclusos?: string[]
+  naoInclusos?: string[]
+  roteiro?: { horario: string; evento: string }[]
 }
 
 // ── Passageiro ────────────────────────────────────────────────────────
