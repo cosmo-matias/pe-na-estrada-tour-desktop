@@ -8,9 +8,10 @@ import { Passeios } from './pages/Passeios'
 import { FormularioReserva } from './pages/FormularioReserva'
 import { Passageiros } from './pages/Passageiros'
 import { Financeiro } from './pages/Financeiro'
+import { Leads } from './pages/Leads'
 
 // ── Tipos ─────────────────────────────────────────────────────────────
-type MenuId = 'home' | 'passeios' | 'passageiros' | 'financeiro'
+type MenuId = 'home' | 'passeios' | 'passageiros' | 'financeiro' | 'leads'
 
 interface MenuItem {
   id: MenuId
@@ -23,6 +24,7 @@ const menuItems: MenuItem[] = [
   { id: 'passeios', label: 'Passeios', icon: '🚌' },
   { id: 'passageiros', label: 'Passageiros', icon: '👥' },
   { id: 'financeiro', label: 'Financeiro', icon: '💰' },
+  { id: 'leads', label: 'Lista VIP', icon: '🌟' },
 ]
 
 // ── Componente de Layout do Dashboard ───────────────────────────────
@@ -123,6 +125,7 @@ function DashboardLayout() {
           {activeMenu === 'passeios' && <Passeios />}
           {activeMenu === 'passageiros' && <Passageiros />}
           {activeMenu === 'financeiro' && <Financeiro />}
+          {activeMenu === 'leads' && <Leads />}
         </div>
       </main>
     </div>
