@@ -23,9 +23,13 @@ export function Leads() {
       })
       
       data.sort((a, b) => {
-        const timeA = a.dataCadastro ? new Date(a.dataCadastro).getTime() : 0
-        const timeB = b.dataCadastro ? new Date(b.dataCadastro).getTime() : 0
-        return timeB - timeA
+        const getMillis = (val: any) => {
+          if (!val) return 0
+          if (typeof val.toDate === 'function') return val.toDate().getTime()
+          if (val.seconds) return val.seconds * 1000
+          return new Date(val).getTime()
+        }
+        return getMillis(b.dataCadastro) - getMillis(a.dataCadastro)
       })
       
       setLeads(data)
@@ -38,10 +42,11 @@ export function Leads() {
     return () => unsubscribe()
   }, [])
 
-  const formatarData = (dataStr: string) => {
+  const formatarData = (dataStr: any) => {
     if (!dataStr) return '-'
     try {
-      const data = new Date(dataStr)
+      const data = typeof dataStr.toDate === 'function' ? dataStr.toDate() : 
+                   (dataStr.seconds ? new Date(dataStr.seconds * 1000) : new Date(dataStr))
       return data.toLocaleString('pt-BR', { 
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit'
