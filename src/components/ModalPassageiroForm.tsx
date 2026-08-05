@@ -330,6 +330,12 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
             </label>
           </div>
 
+          {passageiroEdicao?.nomeResponsavelInformado && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-sm">
+              💡 Responsável informado pelo cliente na reserva: <strong>{passageiroEdicao.nomeResponsavelInformado}</strong>
+            </div>
+          )}
+
           {isCriancaColo && (
             <div className="pt-2 relative">
               <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">
