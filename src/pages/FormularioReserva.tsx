@@ -363,23 +363,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                       </div>
                     </div>
 
-                    {calcularIdade(pax.dataNascimento) < 18 && (
-                      <div className="flex flex-col gap-1.5 mt-2 mb-2 p-4 bg-brand-light/50 rounded-xl border border-brand-secondary/20">
-                        <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/70">Nome do Responsável Legal (Obrigatório)</label>
-                        <input
-                          required
-                          type="text"
-                          value={pax.nomeResponsavelInformado || ''}
-                          onChange={(e) => {
-                            const novos = [...passageiros]
-                            novos[idx] = { ...novos[idx], nomeResponsavelInformado: e.target.value }
-                            setPassageiros(novos)
-                          }}
-                          placeholder="Ex: Maria da Silva"
-                          className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
-                        />
-                      </div>
-                    )}
+
 
                     {/* CPF e WhatsApp */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -464,6 +448,24 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                         </div>
                       </div>
                     </div>
+
+                    {calcularIdade(pax.dataNascimento) < 18 && (
+                      <div className="flex flex-col gap-1.5 mt-2 mb-2 p-4 bg-brand-light/50 rounded-xl border border-brand-secondary/20">
+                        <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/70">Nome do Responsável Legal (Obrigatório)</label>
+                        <input
+                          required
+                          type="text"
+                          value={pax.nomeResponsavelInformado || ''}
+                          onChange={(e) => {
+                            const novos = [...passageiros]
+                            novos[idx] = { ...novos[idx], nomeResponsavelInformado: e.target.value }
+                            setPassageiros(novos)
+                          }}
+                          placeholder="Ex: Maria da Silva"
+                          className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                        />
+                      </div>
+                    )}
 
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/70">Contato de Emergência</label>
