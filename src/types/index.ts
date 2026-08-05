@@ -85,6 +85,7 @@ export interface Passageiro {
   isAgente?: boolean
   isCriancaColo?: boolean
   nomeResponsavel?: string
+  nomeResponsavelInformado?: string
   responsavelId?: string
   desconto?: {
     tipo: 'porcentagem' | 'fixo'

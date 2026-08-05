@@ -22,6 +22,7 @@ interface PassengerFormData {
   formaPagamento: FormaPagamento
   isCriancaColo?: boolean
   nomeResponsavel?: string
+  nomeResponsavelInformado?: string
 }
 
 const initialPassenger: PassengerFormData = {
@@ -40,6 +41,7 @@ const initialPassenger: PassengerFormData = {
   formaPagamento: 'pix',
   isCriancaColo: false,
   nomeResponsavel: '',
+  nomeResponsavelInformado: '',
 }
 
 const formatCPF = (value: string) => {
@@ -203,6 +205,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
           formaPagamento: pax.formaPagamento,
           isCriancaColo: pax.isCriancaColo,
           nomeResponsavel: pax.nomeResponsavel,
+          nomeResponsavelInformado: pax.nomeResponsavelInformado || null,
           statusAlocacao: 'nao_alocado',
           numeroPoltrona: null,
           veiculoAlocado: null,
@@ -360,6 +363,24 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                       </div>
                     </div>
 
+                    {calcularIdade(pax.dataNascimento) < 18 && (
+                      <div className="flex flex-col gap-1.5 mt-2 mb-2 p-4 bg-brand-light/50 rounded-xl border border-brand-secondary/20">
+                        <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/70">Nome do Responsável Legal (Obrigatório)</label>
+                        <input
+                          required
+                          type="text"
+                          value={pax.nomeResponsavelInformado || ''}
+                          onChange={(e) => {
+                            const novos = [...passageiros]
+                            novos[idx] = { ...novos[idx], nomeResponsavelInformado: e.target.value }
+                            setPassageiros(novos)
+                          }}
+                          placeholder="Ex: Maria da Silva"
+                          className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                        />
+                      </div>
+                    )}
+
                     {/* CPF e WhatsApp */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div className="flex flex-col gap-1.5">
@@ -415,45 +436,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
                         />
                       </div>
                       
-                    {/* Criança de Colo */}
-                    <div className="flex flex-col gap-3 p-4 bg-brand-light/50 rounded-xl border border-brand-secondary/20">
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={pax.isCriancaColo}
-                          disabled={calcularIdade(pax.dataNascimento) <= 3}
-                          onChange={(e) => {
-                            const novos = [...passageiros]
-                            novos[idx] = { ...novos[idx], isCriancaColo: e.target.checked }
-                            setPassageiros(novos)
-                          }}
-                          className="w-5 h-5 rounded border-brand-secondary/50 text-brand-primary focus:ring-brand-primary/20 disabled:opacity-50"
-                        />
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-brand-dark">Criança de Colo (Não ocupa poltrona)</span>
-                          {calcularIdade(pax.dataNascimento) <= 3 && (
-                            <span className="text-[10px] text-brand-primary font-semibold">Marcado automaticamente pela idade</span>
-                          )}
-                        </div>
-                      </label>
-                      {pax.isCriancaColo && (
-                        <div className="flex flex-col gap-1.5 mt-2">
-                          <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/70">Nome do Responsável</label>
-                          <input
-                            required={pax.isCriancaColo}
-                            type="text"
-                            value={pax.nomeResponsavel || ''}
-                            onChange={(e) => {
-                              const novos = [...passageiros]
-                              novos[idx] = { ...novos[idx], nomeResponsavel: e.target.value }
-                              setPassageiros(novos)
-                            }}
-                            placeholder="Ex: Maria da Silva"
-                            className="w-full p-3 rounded-lg text-base bg-white border border-brand-secondary/50 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
-                          />
-                        </div>
-                      )}
-                    </div>
+
 
                       <div className="grid grid-cols-2 gap-5">
                         <div className="flex flex-col gap-1.5">
