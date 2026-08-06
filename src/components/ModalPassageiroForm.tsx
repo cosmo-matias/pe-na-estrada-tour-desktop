@@ -242,6 +242,15 @@ export function ModalPassageiroForm({ aberto, onFechar, passageiroEdicao, passei
             </div>
           </div>
 
+          {passageiroEdicao?.formaPagamento && (
+            <div className="pt-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Forma de Pagamento (Pelo Cliente)</label>
+              <div className="w-full px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800 font-bold capitalize flex items-center gap-2 mb-4">
+                💰 {passageiroEdicao.formaPagamento.replace('_', ' ')}
+              </div>
+            </div>
+          )}
+
           <div className="pt-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark/60 mb-2">Ponto de Embarque Desejado</label>
             <select required value={formData.pontoEmbarque} onChange={e => setFormData({ ...formData, pontoEmbarque: e.target.value })} className="w-full px-4 py-3 bg-brand-light border border-brand-secondary/30 rounded-xl focus:border-brand-primary outline-none text-sm">

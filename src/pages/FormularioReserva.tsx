@@ -86,6 +86,7 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
   const [aceiteInfo, setAceiteInfo] = useState(false)
   const [aceiteLgpd, setAceiteLgpd] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [linkZap, setLinkZap] = useState('')
 
   // Busca o passeio no Firebase
   useEffect(() => {
@@ -228,7 +229,10 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
 
       await Promise.all(promises)
 
-      alert('✅ Reserva solicitada com sucesso! Entraremos em contato.')
+      const pMain = passageiros[0]
+      const txt = `🎫 *NOVA RESERVA INICIADA*\n*Passeio:* ${passeio?.destino}\n*Passageiro Principal:* ${pMain.nomeCompleto}\n*Vagas:* ${quantidadeVagas}\n*Forma de Pagamento:* ${pMain.formaPagamento.replace('_', ' ')}`
+      const linkWhatsApp = `https://wa.me/5583993620038?text=${encodeURIComponent(txt)}`
+      setLinkZap(linkWhatsApp)
       
       // Limpa formulário
       setQuantidadeVagas(1)
@@ -250,6 +254,28 @@ export function FormularioReserva({ passeioId }: { passeioId: string }) {
 
   if (erro || !passeio) {
     return <div className="min-h-screen flex items-center justify-center">Passeio não encontrado ou indisponível.</div>;
+  }
+
+  if (linkZap) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-brand-light">
+        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center border border-green-100">
+          <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">✅</div>
+          <h2 className="text-2xl font-bold text-brand-dark mb-4">Reserva Solicitada!</h2>
+          <p className="text-brand-dark/70 mb-8 leading-relaxed">
+            Seus dados foram enviados com sucesso. Para concluir e garantir sua vaga, finalize o pagamento pelo WhatsApp.
+          </p>
+          <a
+            href={linkZap}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full py-4 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold rounded-xl transition-all shadow-lg shadow-[#25D366]/30"
+          >
+            Concluir Pagamento no WhatsApp
+          </a>
+        </div>
+      </div>
+    )
   }
 
   return (
